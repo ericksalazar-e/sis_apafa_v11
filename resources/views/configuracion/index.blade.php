@@ -1551,13 +1551,6 @@
                 <h3 class="font-extrabold text-slate-800 text-sm flex items-center gap-2 border-b border-slate-100 pb-3">
                     <i class="fa-solid fa-chart-pie text-indigo-600"></i> Estado Actual del Padrón Escolar
                 </h3>
-
-                @php
-                    $totalMatriculados = \App\Models\Estudiante::where('empresa_id', $empresa->id ?? 1)->where(fn($q)=>$q->whereNull('estado_matricula')->orWhere('estado_matricula','MATRICULADO'))->count();
-                    $totalEgresados = \App\Models\Estudiante::where('empresa_id', $empresa->id ?? 1)->where('estado_matricula', 'EGRESADO')->count();
-                    $totalPadresAsoc = \App\Models\PadreFamilia::where('empresa_id', $empresa->id ?? 1)->count();
-                @endphp
-
                 <div class="space-y-3 text-xs">
                     <div class="p-3 bg-slate-50 rounded-2xl flex items-center justify-between">
                         <span class="text-slate-600 font-semibold flex items-center gap-2">

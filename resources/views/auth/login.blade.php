@@ -7,9 +7,7 @@
 
     <!-- Favicon del Navegador (Logo Dinámico Institucional) -->
     @php
-        $favLogin = \App\Models\Empresa::find(session('empresa_id') ?? 1)?->foto_institucion 
-            ?? \App\Models\Empresa::first()?->foto_institucion 
-            ?? 'favicon.png';
+        $favLogin = $currentTenant?->foto_institucion ?? 'favicon.png';
         $favVerL = file_exists(public_path($favLogin)) ? filemtime(public_path($favLogin)) : time();
     @endphp
     <link rel="icon" type="image/png" sizes="32x32" href="{{ asset('favicon-32x32.png') }}?v={{ $favVerL }}">

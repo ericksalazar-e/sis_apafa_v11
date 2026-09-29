@@ -128,6 +128,16 @@ class ConfiguracionController extends Controller
 
         $horariosTurnos = \App\Models\HorarioTurno::sincronizarYObtener($empresa->id ?? $empresaId);
 
+        $empresaIdVal = $empresa->id ?? $empresaId;
+        $totalMatriculados = Estudiante::where('empresa_id', $empresaIdVal)
+            ->where(fn ($q) => $q->whereNull('estado_matricula')->orWhere('estado_matricula', 'MATRICULADO'))
+            ->count();
+        $totalEgresados = Estudiante::where('empresa_id', $empresaIdVal)
+            ->where('estado_matricula', 'EGRESADO')
+            ->count();
+        $totalPadresAsoc = PadreFamilia::where('empresa_id', $empresaIdVal)
+            ->count();
+
         return view('configuracion.index', compact(
             'empresa',
             'cargos',
@@ -142,7 +152,10 @@ class ConfiguracionController extends Controller
             'gradosSeccionesTurnos',
             'talleres',
             'gradosSeccionesExistentes',
-            'horariosTurnos'
+            'horariosTurnos',
+            'totalMatriculados',
+            'totalEgresados',
+            'totalPadresAsoc'
         ));
     }
 

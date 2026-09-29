@@ -7,77 +7,46 @@
 
     <!-- KPI Cards Grid -->
     <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
-        <!-- Card 1: Padres -->
-        <div class="bg-white rounded-2xl p-5 border border-slate-200/80 shadow-sm hover:shadow-md transition-shadow">
-            <div class="flex items-center justify-between">
-                <div>
-                    <p class="text-xs font-semibold text-slate-500 uppercase tracking-wider">Padres Afiliados</p>
-                    <h3 class="text-2xl font-extrabold text-slate-800 mt-1">{{ number_format($totalPadres) }}</h3>
-                    <p class="text-[11px] text-emerald-600 font-semibold mt-1 flex items-center gap-1">
-                        <i class="fa-solid fa-arrow-trend-up"></i> 100% en esta institución
-                    </p>
-                </div>
-                <div class="h-12 w-12 rounded-xl bg-indigo-50 text-indigo-600 flex items-center justify-center text-xl">
-                    <i class="fa-solid fa-users"></i>
-                </div>
-            </div>
-        </div>
-
-        <!-- Card 2: Estudiantes -->
-        <div class="bg-white rounded-2xl p-5 border border-slate-200/80 shadow-sm hover:shadow-md transition-shadow">
-            <div class="flex items-center justify-between">
-                <div>
-                    <p class="text-xs font-semibold text-slate-500 uppercase tracking-wider">Alumnos Matriculados</p>
-                    <h3 class="text-2xl font-extrabold text-slate-800 mt-1">{{ number_format($totalEstudiantes) }}</h3>
-                    <p class="text-[11px] text-indigo-600 font-semibold mt-1">Hijos de asociados</p>
-                </div>
-                <div class="h-12 w-12 rounded-xl bg-violet-50 text-violet-600 flex items-center justify-center text-xl">
-                    <i class="fa-solid fa-user-graduate"></i>
-                </div>
-            </div>
-        </div>
-
-        <!-- Card 3: Recaudado -->
-        <div class="bg-white rounded-2xl p-5 border border-slate-200/80 shadow-sm hover:shadow-md transition-shadow">
-            <div class="flex items-center justify-between">
-                <div>
-                    <p class="text-xs font-semibold text-slate-500 uppercase tracking-wider">Recaudación Total</p>
-                    <h3 class="text-2xl font-extrabold text-emerald-600 mt-1">S/ {{ number_format($totalRecaudado, 2) }}</h3>
-                    <p class="text-[11px] text-slate-500 mt-1">Ingresos ingresados a caja</p>
-                </div>
-                <div class="h-12 w-12 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center text-xl">
-                    <i class="fa-solid fa-sack-dollar"></i>
-                </div>
-            </div>
-        </div>
-
-        <!-- Card 4: Deuda Pendiente -->
-        <div class="bg-white rounded-2xl p-5 border border-slate-200/80 shadow-sm hover:shadow-md transition-shadow">
-            <div class="flex items-center justify-between">
-                <div>
-                    <p class="text-xs font-semibold text-slate-500 uppercase tracking-wider">Deuda por Cobrar</p>
-                    <h3 class="text-2xl font-extrabold text-rose-500 mt-1">S/ {{ number_format($deudaTotal, 2) }}</h3>
-                    <p class="text-[11px] text-slate-500 mt-1">Pendiente de regularización</p>
-                </div>
-                <div class="h-12 w-12 rounded-xl bg-rose-50 text-rose-600 flex items-center justify-center text-xl">
-                    <i class="fa-solid fa-clock-rotate-left"></i>
-                </div>
-            </div>
-        </div>
+        <x-stat-card 
+            title="Padres Afiliados" 
+            :value="number_format($totalPadres)" 
+            icon="fa-solid fa-users" 
+            color="indigo" 
+            subtitle="100% en esta institución" 
+        />
+        <x-stat-card 
+            title="Alumnos Matriculados" 
+            :value="number_format($totalEstudiantes)" 
+            icon="fa-solid fa-user-graduate" 
+            color="purple" 
+            subtitle="Hijos de asociados" 
+        />
+        <x-stat-card 
+            title="Recaudación Total" 
+            :value="'S/ ' . number_format($totalRecaudado, 2)" 
+            icon="fa-solid fa-sack-dollar" 
+            color="emerald" 
+            subtitle="Ingresos ingresados a caja" 
+        />
+        <x-stat-card 
+            title="Deuda por Cobrar" 
+            :value="'S/ ' . number_format($deudaTotal, 2)" 
+            icon="fa-solid fa-clock-rotate-left" 
+            color="rose" 
+            subtitle="Pendiente de regularización" 
+        />
     </div>
 
     <!-- Charts Section -->
     <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
         <!-- Main Line/Bar Chart (Recaudación) -->
-        <div class="lg:col-span-2 bg-white rounded-2xl p-6 border border-slate-200/80 shadow-sm">
+        <div class="lg:col-span-2 bg-white rounded-3xl p-6 border border-slate-200/90 shadow-sm">
             <div class="flex items-center justify-between mb-4">
                 <div>
-                    <h4 class="text-base font-bold text-slate-800">Evolución de Recaudación Mensual</h4>
+                    <h4 class="text-base font-bold text-slate-800 tracking-tight">Evolución de Recaudación Mensual</h4>
                     <p class="text-xs text-slate-500">Métricas de ingresos en Soles (PEN) por periodo</p>
                 </div>
-                <span class="text-xs font-semibold px-2.5 py-1 rounded-lg bg-indigo-50 text-indigo-700">
-                    Año Fiscal 2026
-                </span>
+                <x-badge color="indigo">Año Fiscal 2026</x-badge>
             </div>
             <div class="h-72">
                 <canvas id="recaudacionChart"></canvas>
@@ -151,17 +120,11 @@
                             </td>
                             <td class="px-5 py-3.5">
                                 @if($pago->estado_facturacion === 'EMITIDO')
-                                    <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-bold bg-emerald-100/70 text-emerald-800 border border-emerald-200">
-                                        <i class="fa-solid fa-check text-[10px]"></i> Aceptado SUNAT
-                                    </span>
+                                    <x-badge color="emerald" dot>Aceptado SUNAT</x-badge>
                                 @elseif($pago->estado_facturacion === 'EN_COLA')
-                                    <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-bold bg-amber-100/70 text-amber-800 border border-amber-200 animate-pulse">
-                                        <i class="fa-solid fa-spinner fa-spin text-[10px]"></i> En cola async
-                                    </span>
+                                    <x-badge color="amber" dot class="animate-pulse">En cola async</x-badge>
                                 @else
-                                    <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-bold bg-slate-100 text-slate-600">
-                                        {{ $pago->estado_facturacion }}
-                                    </span>
+                                    <x-badge color="slate">{{ $pago->estado_facturacion }}</x-badge>
                                 @endif
                             </td>
                         </tr>

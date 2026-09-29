@@ -49,6 +49,11 @@ class QuioscoController extends Controller
             return $q->concesionVigente ? $q->concesionVigente->deuda_acumulada : 0;
         });
 
+        $pagosRecientes = PagoQuiosco::with('concesion.quiosco')
+            ->orderBy('fecha_pago', 'desc')
+            ->orderBy('id', 'desc')
+            ->get();
+
         return view('quioscos.index', compact(
             'quioscos',
             'concesiones',
@@ -57,7 +62,8 @@ class QuioscoController extends Controller
             'canonMensualTotal',
             'mesActualNombre',
             'recaudadoMesActual',
-            'totalDeudaQuioscos'
+            'totalDeudaQuioscos',
+            'pagosRecientes'
         ));
     }
 

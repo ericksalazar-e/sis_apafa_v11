@@ -240,9 +240,6 @@
                     </tr>
                 </thead>
                 <tbody class="divide-y divide-slate-100">
-                    @php
-                        $pagosRecientes = \App\Models\PagoQuiosco::with('concesion.quiosco')->orderBy('fecha_pago', 'desc')->orderBy('id', 'desc')->get();
-                    @endphp
                     @forelse($pagosRecientes as $p)
                     <tr class="hover:bg-slate-50 transition-colors">
                         <td class="px-5 py-3 font-mono font-bold text-xs text-slate-800">

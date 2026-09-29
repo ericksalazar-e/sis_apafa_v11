@@ -7,10 +7,7 @@
 
     <!-- Favicon del Navegador (Logo Dinámico Institucional) -->
     @php
-        $faviconImg = $currentTenant->foto_institucion 
-            ?? \App\Models\Empresa::find(session('empresa_id') ?? 1)?->foto_institucion 
-            ?? \App\Models\Empresa::first()?->foto_institucion 
-            ?? 'favicon.png';
+        $faviconImg = $currentTenant->foto_institucion ?? 'favicon.png';
         $favVer = file_exists(public_path($faviconImg)) ? filemtime(public_path($faviconImg)) : time();
     @endphp
     <link rel="icon" type="image/png" sizes="32x32" href="{{ asset('favicon-32x32.png') }}?v={{ $favVer }}">
@@ -79,17 +76,9 @@
         <div class="p-4 flex items-center justify-between border-b border-slate-800/80">
             <div class="flex items-center gap-3 overflow-hidden">
                 @php
-                    $tenantLogo = $currentTenant->foto_institucion 
-                        ?? \App\Models\Empresa::find(1)->foto_institucion 
-                        ?? \App\Models\Empresa::first()->foto_institucion 
-                        ?? null;
-                    $tenantNombre = $currentTenant->nombre 
-                        ?? \App\Models\Empresa::find(1)->nombre 
-                        ?? \App\Models\Empresa::first()->nombre 
-                        ?? 'SIS-APAFA';
-                    $tenantPeriodo = $currentTenant->periodo_apafa 
-                        ?? \App\Models\Empresa::find(1)->periodo_apafa 
-                        ?? '2025-2026';
+                    $tenantLogo = $currentTenant->foto_institucion ?? null;
+                    $tenantNombre = $currentTenant->nombre ?? 'SIS-APAFA';
+                    $tenantPeriodo = $currentTenant->periodo_apafa ?? '2025-2026';
                 @endphp
                 @if(!empty($tenantLogo))
                     <div class="h-10 w-10 rounded-xl bg-white p-1 flex items-center justify-center shadow-lg shadow-indigo-500/20 flex-shrink-0 overflow-hidden">
