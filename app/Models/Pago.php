@@ -9,7 +9,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class Pago extends Model
 {
-    use HasFactory, BelongsToTenant;
+    use BelongsToTenant, HasFactory;
 
     protected $table = 'pagos';
 
@@ -25,6 +25,8 @@ class Pago extends Model
         'saldo_pendiente',
         'faena_id',
         'debe',
+        'es_regularizacion',
+        'recibo_manual_referencia',
         'tipo_comprobante',
         'serie',
         'numero',
@@ -45,6 +47,7 @@ class Pago extends Model
         return [
             'monto_pago' => 'decimal:2',
             'debe' => 'decimal:2',
+            'es_regularizacion' => 'boolean',
         ];
     }
 

@@ -12,6 +12,7 @@ class AporteController extends Controller
     public function index()
     {
         $aportes = Aporte::withCount('aportesPadres')->latest()->paginate(10);
+
         return view('aportes.index', compact('aportes'));
     }
 
@@ -32,7 +33,7 @@ class AporteController extends Controller
         // Validación legal: Cuota ordinaria no puede exceder el 1.5% de la UIT vigente
         if ($validated['tipo'] === 'ORDINARIA' && $validated['monto'] > $maxLegal) {
             return back()->withInput()->withErrors([
-                'monto' => "Tope Legal Excedido: Conforme al Art. 74 del D.S. N° 004-2006-ED (Ley N° 28628), la Cuota Ordinaria anual no puede superar el 1.5% de la UIT vigente (Tope máximo: S/ {$maxLegal} considerando UIT S/ {$uitVigente})."
+                'monto' => "Tope Legal Excedido: Conforme al Art. 74 del D.S. N° 004-2006-ED (Ley N° 28628), la Cuota Ordinaria anual no puede superar el 1.5% de la UIT vigente (Tope máximo: S/ {$maxLegal} considerando UIT S/ {$uitVigente}).",
             ]);
         }
 
@@ -42,7 +43,7 @@ class AporteController extends Controller
         if ($mismoDia) {
             return back()->withInput()->withErrors([
                 'fecha' => "Fecha no permitida: Ya existe el aporte '{$mismoDia->titulo}' registrado para el mismo día ({$fechaDia}). Conforme al reglamento de APAFA, no se pueden programar múltiples aportes en la misma fecha.",
-                'titulo' => "Registro Duplicado: Ya existe un aporte registrado para la fecha {$fechaDia}."
+                'titulo' => "Registro Duplicado: Ya existe un aporte registrado para la fecha {$fechaDia}.",
             ]);
         }
 
@@ -55,7 +56,7 @@ class AporteController extends Controller
 
         if ($existeDuplicado) {
             return back()->withInput()->withErrors([
-                'titulo' => "Registro Duplicado: Ya existe un aporte o cuota con el título '{$titulo}' para el año escolar {$año}."
+                'titulo' => "Registro Duplicado: Ya existe un aporte o cuota con el título '{$titulo}' para el año escolar {$año}.",
             ]);
         }
 
@@ -92,6 +93,7 @@ class AporteController extends Controller
         });
 
         $tipoTexto = $aporte->tipo === 'ORDINARIA' ? 'Cuota Ordinaria Anual (Ley 28628)' : 'Aporte Extraordinario';
+
         return redirect()->route('aportes.index')->with('success', "{$tipoTexto} '{$aporte->titulo}' (S/ {$aporte->monto}) registrada exitosamente y asignada a {$padres->count()} asociados (padres de familia).");
     }
 

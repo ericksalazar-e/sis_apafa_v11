@@ -12,16 +12,17 @@ return Application::configure(basePath: dirname(__DIR__))
     )
     ->withMiddleware(function (Middleware $middleware) {
         $middleware->web(append: [
-            \App\Http\Middleware\SetTenant::class,
+            App\Http\Middleware\SetTenant::class,
         ]);
 
-        $middleware->redirectGuestsTo(function (\Illuminate\Http\Request $request) {
+        $middleware->redirectGuestsTo(function (Illuminate\Http\Request $request) {
             session()->flash('error', 'Sesión requerida: Debe iniciar sesión para acceder al sistema.');
+
             return route('login');
         });
 
         $middleware->alias([
-            'role' => \App\Http\Middleware\CheckRole::class,
+            'role' => App\Http\Middleware\CheckRole::class,
         ]);
     })
     ->withExceptions(function (Exceptions $exceptions) {

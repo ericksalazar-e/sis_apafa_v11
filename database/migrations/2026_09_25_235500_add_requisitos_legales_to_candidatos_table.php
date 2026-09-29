@@ -13,19 +13,19 @@ return new class extends Migration
     public function up(): void
     {
         Schema::table('candidatos_electorales', function (Blueprint $table) {
-            if (!Schema::hasColumn('candidatos_electorales', 'al_dia_pagos')) {
+            if (! Schema::hasColumn('candidatos_electorales', 'al_dia_pagos')) {
                 $table->boolean('al_dia_pagos')->default(true)->after('cumple_requisitos');
             }
-            if (!Schema::hasColumn('candidatos_electorales', 'declara_sin_antecedentes')) {
+            if (! Schema::hasColumn('candidatos_electorales', 'declara_sin_antecedentes')) {
                 $table->boolean('declara_sin_antecedentes')->default(true)->after('al_dia_pagos');
             }
-            if (!Schema::hasColumn('candidatos_electorales', 'declara_no_labora_ie')) {
+            if (! Schema::hasColumn('candidatos_electorales', 'declara_no_labora_ie')) {
                 $table->boolean('declara_no_labora_ie')->default(true)->after('declara_sin_antecedentes');
             }
-            if (!Schema::hasColumn('candidatos_electorales', 'declara_no_removido')) {
+            if (! Schema::hasColumn('candidatos_electorales', 'declara_no_removido')) {
                 $table->boolean('declara_no_removido')->default(true)->after('declara_no_labora_ie');
             }
-            if (!Schema::hasColumn('candidatos_electorales', 'grado_estudiante_valido')) {
+            if (! Schema::hasColumn('candidatos_electorales', 'grado_estudiante_valido')) {
                 $table->boolean('grado_estudiante_valido')->default(true)->after('declara_no_removido');
             }
         });

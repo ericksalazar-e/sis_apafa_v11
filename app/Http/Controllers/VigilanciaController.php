@@ -18,12 +18,16 @@ class VigilanciaController extends Controller
     public function index()
     {
         $dictamenes = DictamenVigilancia::with('user')->latest()->paginate(10);
-        $periodosExistentes = DictamenVigilancia::pluck('periodo')->map(fn($p) => trim($p))->toArray();
+        $periodosExistentes = DictamenVigilancia::pluck('periodo')->map(fn ($p) => trim($p))->toArray();
+
+        $empresaId = (int) (session('empresa_id') ?? (auth()->user()->empresa_id ?? 1));
+        $empresa = Empresa::find($empresaId) ?? Empresa::first();
+        $saldoInicialCaja = (float) ($empresa->saldo_inicial_caja ?? 0.00);
 
         // Cálculos contables en tiempo real
         $totalIngresosCuotas = Pago::sum('monto_pago');
         $totalIngresosQuioscos = PagoQuiosco::sum('monto');
-        $totalIngresos = $totalIngresosCuotas + $totalIngresosQuioscos;
+        $totalIngresos = $saldoInicialCaja + $totalIngresosCuotas + $totalIngresosQuioscos;
 
         $totalGastosPoa = GastoPoa::sum('monto');
         $saldoEnCaja = $totalIngresos - $totalGastosPoa;
@@ -37,6 +41,7 @@ class VigilanciaController extends Controller
             'dictamenes',
             'periodosExistentes',
             'totalIngresos',
+            'saldoInicialCaja',
             'totalIngresosCuotas',
             'totalIngresosQuioscos',
             'totalGastosPoa',
@@ -71,19 +76,22 @@ class VigilanciaController extends Controller
 
         if ($existePeriodo) {
             return back()->withInput()->withErrors([
-                'periodo' => "Ya existe un dictamen registrado para el periodo \"{$periodo}\". No se permite duplicar el periodo del dictamen."
+                'periodo' => "Ya existe un dictamen registrado para el periodo \"{$periodo}\". No se permite duplicar el periodo del dictamen.",
             ]);
         }
 
-        $totalIngresos = Pago::sum('monto_pago') + PagoQuiosco::sum('monto');
+        $empresa = Empresa::find($empresaId) ?? Empresa::first();
+        $saldoInicialCaja = (float) ($empresa->saldo_inicial_caja ?? 0.00);
+        $totalIngresos = $saldoInicialCaja + Pago::sum('monto_pago') + PagoQuiosco::sum('monto');
         $totalGastos = GastoPoa::sum('monto');
         $saldo = $totalIngresos - $totalGastos;
 
         // Inconsistencia contable: No se puede emitir un dictamen FAVORABLE si el saldo es deficitario (deuda en caja)
         if ($saldo < 0 && $request->tipo_dictamen === 'FAVORABLE') {
             $montoDeficit = number_format(abs($saldo), 2);
+
             return back()->withInput()->withErrors([
-                'tipo_dictamen' => "Inconsistencia de auditoría contable: No se puede emitir un dictamen FAVORABLE cuando la APAFA registra un déficit / saldo negativo en cuenta de S/ -{$montoDeficit}. El resultado del dictamen debe ser calificado como OBSERVADO o DESAPROBADO."
+                'tipo_dictamen' => "Inconsistencia de auditoría contable: No se puede emitir un dictamen FAVORABLE cuando la APAFA registra un déficit / saldo negativo en cuenta de S/ -{$montoDeficit}. El resultado del dictamen debe ser calificado como OBSERVADO o DESAPROBADO.",
             ]);
         }
 

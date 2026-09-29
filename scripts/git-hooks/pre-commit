@@ -1,0 +1,43 @@
+#!/usr/bin/env bash
+# ========================================================
+# Git Pre-Commit Hook - SIS-APAFA V11
+# Asegura calidad de código, sintaxis y estilo antes de commit
+# ========================================================
+
+echo "🔍 [Pre-Commit] Verificando sintaxis PHP en archivos modificados..."
+
+# 1. Obtener archivos PHP modificados en el staging
+STAGED_PHP_FILES=$(git diff --cached --name-only --diff-filter=ACM -- "*.php")
+
+if [ -z "$STAGED_PHP_FILES" ]; then
+    echo "✅ No hay archivos PHP en staging. Procediendo..."
+    exit 0
+fi
+
+# 2. Comprobar sintaxis con php -l
+for FILE in $STAGED_PHP_FILES; do
+    if [ -f "$FILE" ]; then
+        php -l "$FILE" > /dev/null 2>&1
+        if [ $? -ne 0 ]; then
+            echo "❌ Error de sintaxis en: $FILE"
+            php -l "$FILE"
+            exit 1
+        fi
+    fi
+done
+
+echo "🎨 [Pre-Commit] Verificando estándar de código con Laravel Pint..."
+
+if [ -f "./vendor/bin/pint" ]; then
+    ./vendor/bin/pint --test
+    PINT_EXIT=$?
+    if [ $PINT_EXIT -ne 0 ]; then
+        echo "⚠️ Se detectaron inconsistencias de formato. Aplicando corrección automática con Pint..."
+        ./vendor/bin/pint
+        echo "💡 Los archivos han sido formateados. Por favor revisa y vuelve a añadir los cambios con 'git add'."
+        exit 1
+    fi
+fi
+
+echo "✅ [Pre-Commit] Código verificado con éxito. Commit permitido."
+exit 0

@@ -2,13 +2,13 @@
 
 namespace App\Http\Controllers;
 
-use App\Models\ComicioElectoral;
-use App\Models\Empresa;
-use App\Models\PadreFamilia;
-use App\Models\VotoPadron;
-use App\Models\ListaElectoral;
 use App\Models\CandidatoElectoral;
 use App\Models\Cargo;
+use App\Models\ComicioElectoral;
+use App\Models\Empresa;
+use App\Models\ListaElectoral;
+use App\Models\PadreFamilia;
+use App\Models\VotoPadron;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
 
@@ -21,23 +21,23 @@ class EleccionController extends Controller
     public function index(Request $request)
     {
         $comicioId = $request->query('comicio_id');
-        
+
         if ($comicioId) {
             $comicio = ComicioElectoral::with([
                 'votos.padreFamilia',
-                'listas.candidatos.padreFamilia.estudiantes'
+                'listas.candidatos.padreFamilia.estudiantes',
             ])->find($comicioId);
         }
 
         if (empty($comicio)) {
             $comicio = ComicioElectoral::with([
                 'votos.padreFamilia',
-                'listas.candidatos.padreFamilia.estudiantes'
+                'listas.candidatos.padreFamilia.estudiantes',
             ])->latest()->first();
         }
 
         // Si no existe proceso convocado, creamos el del presente periodo por defecto dentro de la ventana legal
-        if (!$comicio) {
+        if (! $comicio) {
             $comicio = ComicioElectoral::create([
                 'empresa_id' => session('empresa_id', 1),
                 'año_electoral' => 2026,
@@ -102,7 +102,7 @@ class EleccionController extends Controller
         }
 
         // 2. Establecer corte de padrón obligatorio al 31 de agosto por normativa
-        $fechaCorte = $request->fecha_corte_padron ?: ($request->año_electoral . '-08-31');
+        $fechaCorte = $request->fecha_corte_padron ?: ($request->año_electoral.'-08-31');
 
         $comicio = ComicioElectoral::create([
             'empresa_id' => $empresaId,
@@ -116,7 +116,6 @@ class EleccionController extends Controller
         return redirect()->route('elecciones.index', ['comicio_id' => $comicio->id])
             ->with('success', "¡Proceso Electoral {$request->año_electoral} convocado exitosamente para el {$comicio->bienio_electo}! Conforme a la ventana legal (1 de setiembre al 30 de noviembre).");
     }
-
 
     /**
      * Inscribir Lista Electoral de Candidatos a APAFA (Ley N° 28628)
@@ -202,8 +201,8 @@ class EleccionController extends Controller
 
         // 1. Verificación Legal de Requisitos Mínimos (Ley N° 28628 Art. 45 y D.S. N.º 007-2026-MINEDU)
         $verif = $padre->verificarRequisitosApafa();
-        if (!$verif['cumple']) {
-            return back()->withInput()->with('error', 'REQUISITOS DE ELEGIBILIDAD (Ley N° 28628 Art. 45): ' . implode(' ', $verif['errores']));
+        if (! $verif['cumple']) {
+            return back()->withInput()->with('error', 'REQUISITOS DE ELEGIBILIDAD (Ley N° 28628 Art. 45): '.implode(' ', $verif['errores']));
         }
 
         $declaraAntecedentes = $request->boolean('declara_sin_antecedentes', true);
@@ -211,7 +210,7 @@ class EleccionController extends Controller
         $declaraNoRemovido = $request->boolean('declara_no_removido', true);
         $alDiaPagos = $request->boolean('al_dia_pagos', true);
 
-        if (!$declaraAntecedentes || !$declaraNoLabora || !$declaraNoRemovido) {
+        if (! $declaraAntecedentes || ! $declaraNoLabora || ! $declaraNoRemovido) {
             return back()->withInput()->with('error', 'Incompatibilidad legal: El candidato debe acreditar no contar con antecedentes, no laborar en la I.E. y no registrar remoción previa en cargos de APAFA.');
         }
 
@@ -320,17 +319,17 @@ class EleccionController extends Controller
             $idsNuevos = $lista->candidatos->pluck('padre_familia_id')->toArray();
 
             foreach ($directivosSalientes as $saliente) {
-                if (!in_array($saliente->id, $idsNuevos)) {
+                if (! in_array($saliente->id, $idsNuevos)) {
                     $fechaHoy = Carbon::now()->toDateString();
                     $yaExiste = \App\Models\MovimientoDirectiva::where('empresa_id', $empresaId)
                         ->whereDate('fecha_vacancia', $fechaHoy)
-                        ->where(function($q) use ($saliente) {
+                        ->where(function ($q) use ($saliente) {
                             $q->where('directivo_saliente_dni', $saliente->padre_dni)
-                              ->orWhere('directivo_saliente_nombre', $saliente->nombre_completo);
+                                ->orWhere('directivo_saliente_nombre', $saliente->nombre_completo);
                         })
                         ->exists();
 
-                    if (!$yaExiste) {
+                    if (! $yaExiste) {
                         \App\Models\MovimientoDirectiva::create([
                             'empresa_id' => $empresaId,
                             'cargo_nombre' => $saliente->cargo->nombre ?? 'Directivo',
@@ -338,8 +337,8 @@ class EleccionController extends Controller
                             'directivo_saliente_dni' => $saliente->padre_dni,
                             'causal_vacancia' => 'FUNCION_CUMPLIDA',
                             'fecha_vacancia' => $fechaHoy,
-                            'directivo_entrante_nombre' => 'Directiva Electa ' . $comicio->bienio_electo,
-                            'numero_acta_asamblea' => 'ACTA-PROCLAMACION-' . $comicio->año_electoral,
+                            'directivo_entrante_nombre' => 'Directiva Electa '.$comicio->bienio_electo,
+                            'numero_acta_asamblea' => 'ACTA-PROCLAMACION-'.$comicio->año_electoral,
                             'observaciones' => "Conclusión de mandato bienal ({$comicio->bienio_saliente}) según Art. 43 Ley 28628.",
                         ]);
                     }
@@ -449,7 +448,7 @@ class EleccionController extends Controller
         $listaId = $request->input('lista_electoral_id');
         $tipoVoto = $request->input('tipo_voto', 'VALIDO');
 
-        if (!$padreId && !empty($queryText)) {
+        if (! $padreId && ! empty($queryText)) {
             if (preg_match('/APAFA-PADRE-(\d+)/', $queryText, $matches)) {
                 $padreId = (int) $matches[1];
             } else {
@@ -462,7 +461,7 @@ class EleccionController extends Controller
             }
         }
 
-        if (!$padreId) {
+        if (! $padreId) {
             return response()->json(['success' => false, 'message' => 'Asociado no encontrado en el sistema.'], 404);
         }
 
@@ -470,7 +469,7 @@ class EleccionController extends Controller
             ->where('padre_familia_id', $padreId)
             ->first();
 
-        if (!$voto) {
+        if (! $voto) {
             $padre = PadreFamilia::findOrFail($padreId);
             $voto = VotoPadron::create([
                 'comicio_id' => $comicio->id,
@@ -484,7 +483,7 @@ class EleccionController extends Controller
             return response()->json([
                 'success' => false,
                 'already_voted' => true,
-                'message' => "¡ALERTA! El asociado {$voto->padreFamilia->apellidos}, {$voto->padreFamilia->nombres} YA EMITIÓ SU VOTO a las " . Carbon::parse($voto->fecha_hora_voto)->format('H:i:s d/m/Y') . ".",
+                'message' => "¡ALERTA! El asociado {$voto->padreFamilia->apellidos}, {$voto->padreFamilia->nombres} YA EMITIÓ SU VOTO a las ".Carbon::parse($voto->fecha_hora_voto)->format('H:i:s d/m/Y').'.',
                 'voto' => $voto,
             ], 422);
         }
@@ -593,4 +592,3 @@ class EleccionController extends Controller
         return back()->with('success', '¡Datos de los miembros del Comité Electoral actualizados correctamente para el acta oficial!');
     }
 }
-

@@ -4,6 +4,20 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>{{ $currentTenant->nombre ?? 'Sistema APAFA' }} - Laravel 11 Multi-Tenant</title>
+
+    <!-- Favicon del Navegador (Logo Dinámico Institucional) -->
+    @php
+        $faviconImg = $currentTenant->foto_institucion 
+            ?? \App\Models\Empresa::find(session('empresa_id') ?? 1)?->foto_institucion 
+            ?? \App\Models\Empresa::first()?->foto_institucion 
+            ?? 'favicon.png';
+        $favVer = file_exists(public_path($faviconImg)) ? filemtime(public_path($faviconImg)) : time();
+    @endphp
+    <link rel="icon" type="image/png" sizes="32x32" href="{{ asset('favicon-32x32.png') }}?v={{ $favVer }}">
+    <link rel="icon" type="image/png" sizes="16x16" href="{{ asset('favicon-16x16.png') }}?v={{ $favVer }}">
+    <link rel="icon" type="image/x-icon" href="{{ asset('favicon.ico') }}?v={{ $favVer }}">
+    <link rel="shortcut icon" href="{{ asset('favicon.ico') }}?v={{ $favVer }}">
+    <link rel="apple-touch-icon" sizes="180x180" href="{{ asset('apple-touch-icon.png') }}?v={{ $favVer }}">
     
     <!-- Google Fonts: Inter -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -226,19 +240,37 @@
                 Consejo de Vigilancia
             </a>
 
-            <div class="pt-4 pb-1 px-3 text-[11px] font-bold text-slate-500 uppercase tracking-wider">
-                Microservicios
+            <!-- Enlace al Manual de Usuario -->
+            <a href="{{ route('manual') }}" target="_blank"
+               class="flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-sm font-semibold transition-all text-indigo-300 hover:text-white hover:bg-indigo-600/30 border border-indigo-500/30">
+                <i class="fa-solid fa-book-open-reader text-base w-5 text-center text-indigo-400"></i>
+                Manual de Usuario
+                <span class="ml-auto text-[10px] bg-indigo-500/20 text-indigo-300 px-1.5 py-0.5 rounded font-bold uppercase">Guía</span>
+            </a>
+
+            <div class="pt-4 pb-1 px-3 text-[11px] font-bold text-slate-500 uppercase tracking-wider flex items-center justify-between">
+                <span>Microservicios</span>
+                <span class="text-[9px] text-indigo-400 font-mono">UBL 2.1</span>
             </div>
 
-            <div class="px-3.5 py-2.5 rounded-xl bg-slate-800/40 border border-slate-700/50 text-xs">
+            <a href="{{ route('facturacion.index') }}" 
+               class="group block px-3.5 py-2.5 rounded-xl border text-xs transition-all duration-200 {{ request()->routeIs('facturacion.*') ? 'bg-indigo-900/40 border-indigo-500/60 shadow-lg shadow-indigo-950/50' : 'bg-slate-800/40 hover:bg-slate-800/80 border-slate-700/50 hover:border-slate-600' }}">
                 <div class="flex items-center justify-between text-slate-300 font-semibold mb-1">
-                    <span class="flex items-center gap-1.5">
-                        <i class="fa-solid fa-microchip text-indigo-400"></i> Facturación CPE
+                    <span class="flex items-center gap-1.5 group-hover:text-white transition-colors">
+                        <i class="fa-solid fa-microchip {{ request()->routeIs('facturacion.*') ? 'text-indigo-300' : 'text-indigo-400' }}"></i> Facturación CPE
                     </span>
-                    <span class="text-[10px] px-1.5 py-0.5 bg-emerald-500/20 text-emerald-400 rounded-full font-bold">Activo</span>
+                    <span class="inline-flex items-center gap-1 text-[10px] px-2 py-0.5 bg-emerald-500/20 text-emerald-400 rounded-full font-bold">
+                        <span class="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></span> Activo
+                    </span>
                 </div>
-                <p class="text-[11px] text-slate-400 leading-tight">Servicio asíncrono UBL 2.1 en <code class="text-indigo-300 font-mono">/facturacion-service</code></p>
-            </div>
+                <div class="flex items-center justify-between text-[11px] text-slate-400 leading-tight">
+                    <span>Servicio asíncrono UBL 2.1</span>
+                    <i class="fa-solid fa-arrow-right text-[10px] opacity-0 group-hover:opacity-100 group-hover:translate-x-0.5 text-indigo-400 transition-all"></i>
+                </div>
+                <div class="mt-1 text-[10px] text-slate-500 font-mono">
+                    <code>/facturacion-service</code>
+                </div>
+            </a>
         </nav>
 
         <!-- Footer / Environment -->

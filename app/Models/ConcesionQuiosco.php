@@ -10,7 +10,7 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class ConcesionQuiosco extends Model
 {
-    use HasFactory, BelongsToTenant;
+    use BelongsToTenant, HasFactory;
 
     protected $table = 'concesiones_quioscos';
 
@@ -61,7 +61,7 @@ class ConcesionQuiosco extends Model
         $mesesNombres = [
             1 => 'Enero', 2 => 'Febrero', 3 => 'Marzo', 4 => 'Abril',
             5 => 'Mayo', 6 => 'Junio', 7 => 'Julio', 8 => 'Agosto',
-            9 => 'Setiembre', 10 => 'Octubre', 11 => 'Noviembre', 12 => 'Diciembre'
+            9 => 'Setiembre', 10 => 'Octubre', 11 => 'Noviembre', 12 => 'Diciembre',
         ];
 
         $pagos = $this->pagos;
@@ -72,13 +72,14 @@ class ConcesionQuiosco extends Model
         while ($cursor->lte($fin)) {
             $numMes = (int) $cursor->format('n');
             $año = (int) $cursor->format('Y');
-            $nombreMes = $mesesNombres[$numMes] . ' ' . $año;
-            $nombreCorto = substr($mesesNombres[$numMes], 0, 3) . " '" . substr($año, -2);
+            $nombreMes = $mesesNombres[$numMes].' '.$año;
+            $nombreCorto = substr($mesesNombres[$numMes], 0, 3)." '".substr($año, -2);
 
             $pago = $pagos->first(function ($p) use ($mesesNombres, $numMes, $año) {
                 $mesPago = mb_strtolower($p->mes_correspondiente);
                 $nomBuscado = mb_strtolower($mesesNombres[$numMes]);
-                return str_contains($mesPago, $nomBuscado) && (str_contains($mesPago, (string)$año) || count($mesesNombres) == 12);
+
+                return str_contains($mesPago, $nomBuscado) && (str_contains($mesPago, (string) $año) || count($mesesNombres) == 12);
             });
 
             $esPasado = $cursor->copy()->endOfMonth()->lt($hoy);
@@ -124,6 +125,7 @@ class ConcesionQuiosco extends Model
     public function getSiguienteMesPendienteAttribute(): ?string
     {
         $primerPendiente = collect($this->cronograma_mensual)->firstWhere('pagado', false);
+
         return $primerPendiente ? $primerPendiente['mes_nombre'] : null;
     }
 
@@ -135,6 +137,7 @@ class ConcesionQuiosco extends Model
     public function getDeudaAcumuladaAttribute(): float
     {
         $vencidos = collect($this->cronograma_mensual)->where('estado', 'VENCIDO')->count();
+
         return (float) ($vencidos * $this->canon_mensual);
     }
 }

@@ -43,13 +43,13 @@ class AuthController extends Controller
         // Buscar el usuario sin restricciones de tenant para permitir login institucional
         $user = User::withoutGlobalScopes()->where($field, $loginInput)->first();
 
-        if (!$user) {
+        if (! $user) {
             return back()->withInput()->withErrors([
                 'login' => 'El usuario o correo electrónico no se encuentra registrado en el sistema.',
             ])->with('error', 'Usuario no registrado. Verifique los datos ingresados.');
         }
 
-        if (!Auth::validate([$field => $loginInput, 'password' => $credentials['password']])) {
+        if (! \Illuminate\Support\Facades\Hash::check($credentials['password'], $user->password)) {
             return back()->withInput()->withErrors([
                 'password' => 'La contraseña ingresada no es válida.',
             ])->with('error', 'Contraseña incorrecta. Intente de nuevo o consulte con el Administrador.');
@@ -104,7 +104,7 @@ class AuthController extends Controller
             ->first()
             ?? User::withoutGlobalScopes()->where('rol', $rolUpper)->first();
 
-        if (!$user) {
+        if (! $user) {
             return redirect()->route('login')->withErrors(['login' => "No se encontró ningún usuario con el rol {$rol}."]);
         }
 

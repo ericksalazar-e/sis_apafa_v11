@@ -13,7 +13,7 @@ return new class extends Migration
         ];
 
         foreach ($nuevos as $nombre) {
-            if (!TipoConsanguinidad::where('nombre', $nombre)->exists()) {
+            if (! TipoConsanguinidad::where('nombre', $nombre)->exists()) {
                 TipoConsanguinidad::create(['nombre' => $nombre]);
             }
         }

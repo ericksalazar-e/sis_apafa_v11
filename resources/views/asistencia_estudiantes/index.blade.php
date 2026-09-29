@@ -33,6 +33,13 @@
                 @if(!empty($search))<input type="hidden" name="search" value="{{ $search }}">@endif
             </form>
 
+            <!-- Enlace Turnos y Talleres -->
+            <a href="{{ route('configuracion.index', ['tab' => 'turnos-talleres']) }}" 
+               class="px-3.5 py-2 bg-indigo-50 hover:bg-indigo-100 border border-indigo-200 text-indigo-700 font-bold text-xs rounded-xl shadow-sm transition-all flex items-center gap-2">
+                <i class="fa-solid fa-shapes text-indigo-600"></i>
+                <span>Turnos por Grado y Talleres</span>
+            </a>
+
             <!-- Botón Configurar Horarios -->
             <button onclick="document.getElementById('modal-horarios').classList.remove('hidden')" 
                     class="px-3.5 py-2 bg-white hover:bg-slate-50 border border-slate-200 text-slate-700 font-bold text-xs rounded-xl shadow-sm transition-all flex items-center gap-2">
@@ -178,6 +185,30 @@
                 </button>
             </div>
 
+            <!-- Selector Global de Actividad de Escaneo (Clases Regulares vs Talleres Contraturno) -->
+            <div class="max-w-md mx-auto bg-white/10 backdrop-blur-md px-3.5 py-2 rounded-2xl border border-white/15 flex items-center justify-between gap-3 text-left">
+                <div class="flex items-center gap-2 text-indigo-200 flex-shrink-0">
+                    <span class="w-7 h-7 rounded-lg bg-amber-500/20 text-amber-400 flex items-center justify-center text-xs">
+                        <i class="fa-solid fa-bolt-lightning"></i>
+                    </span>
+                    <span class="text-xs font-extrabold uppercase tracking-wider text-slate-200">Actividad:</span>
+                </div>
+                <div class="flex-1">
+                    <select id="scan-actividad-selector" onchange="actualizarActividadEscaneo(this.value)"
+                            class="w-full text-xs font-bold text-white bg-slate-900/90 border border-white/20 rounded-xl px-2.5 py-1.5 focus:ring-2 focus:ring-indigo-400 focus:outline-none cursor-pointer">
+                        <option value="AUTOMATICO">⚡ Automático Inteligente (Clase / Taller)</option>
+                        <option value="CLASE_REGULAR">🎒 Solo Clases Regulares</option>
+                        @if(isset($talleresActivos) && $talleresActivos->count() > 0)
+                            <optgroup label="Talleres Extracurriculares (Contraturno)">
+                                @foreach($talleresActivos as $tac)
+                                    <option value="TALLER_{{ $tac->id }}">🏆 Taller: {{ $tac->nombre }} (Turno {{ $tac->turno }})</option>
+                                @endforeach
+                            </optgroup>
+                        @endif
+                    </select>
+                </div>
+            </div>
+
             <!-- MODE 1: SMARTPHONE CAMERA SCANNER -->
             <div id="mode-camera" class="space-y-3">
                 <h2 class="text-xl sm:text-2xl font-black tracking-tight">
@@ -234,6 +265,7 @@
 
                 <form action="{{ route('asistencia.estudiantes.escanear') }}" method="POST" id="form-scan" class="mt-4">
                     @csrf
+                    <input type="hidden" name="actividad" id="form-scan-actividad" value="AUTOMATICO">
                     <div class="relative flex items-center">
                         <div class="absolute left-4 text-slate-400 text-xl pointer-events-none">
                             <i class="fa-solid fa-barcode"></i>
@@ -435,10 +467,10 @@
                 <p class="text-xs text-slate-500">Listado de asistencias, tardanzas e inasistencias para el {{ date('d/m/Y', strtotime($fecha)) }}</p>
             </div>
 
-            <!-- Filter Badges por Turno y Estado -->
+            <!-- Filter Badges por Turno, Actividad y Estado -->
             <div class="flex flex-wrap items-center gap-1.5 text-xs font-semibold">
-                <a href="{{ route('asistencia.estudiantes.index', array_merge(request()->query(), ['turno' => null, 'estado' => null])) }}" 
-                   class="px-3 py-1.5 rounded-lg transition-colors {{ empty($filtroTurno) && empty($filtroEstado) ? 'bg-indigo-600 text-white' : 'bg-slate-200/70 text-slate-600 hover:bg-slate-300/70' }}">
+                <a href="{{ route('asistencia.estudiantes.index', array_merge(request()->query(), ['turno' => null, 'estado' => null, 'tipo_actividad' => null])) }}" 
+                   class="px-3 py-1.5 rounded-lg transition-colors {{ empty($filtroTurno) && empty($filtroEstado) && (empty($filtroActividad) || $filtroActividad === 'TODOS') ? 'bg-indigo-600 text-white' : 'bg-slate-200/70 text-slate-600 hover:bg-slate-300/70' }}">
                     Todos
                 </a>
                 <a href="{{ route('asistencia.estudiantes.index', array_merge(request()->query(), ['turno' => 'Mañana', 'estado' => null])) }}" 
@@ -449,16 +481,16 @@
                    class="px-3 py-1.5 rounded-lg transition-colors {{ $filtroTurno === 'Tarde' ? 'bg-blue-600 text-white' : 'bg-slate-200/70 text-slate-600 hover:bg-slate-300/70' }}">
                     🌇 Tarde
                 </a>
-                <a href="{{ route('asistencia.estudiantes.index', array_merge(request()->query(), ['turno' => 'Noche', 'estado' => null])) }}" 
-                   class="px-3 py-1.5 rounded-lg transition-colors {{ $filtroTurno === 'Noche' ? 'bg-purple-600 text-white' : 'bg-slate-200/70 text-slate-600 hover:bg-slate-300/70' }}">
-                    🌙 Noche
+                <a href="{{ route('asistencia.estudiantes.index', array_merge(request()->query(), ['tipo_actividad' => 'TALLER', 'turno' => null])) }}" 
+                   class="px-3 py-1.5 rounded-lg transition-colors {{ $filtroActividad === 'TALLER' ? 'bg-indigo-600 text-white' : 'bg-indigo-50 text-indigo-700 hover:bg-indigo-100 border border-indigo-200' }}">
+                    🏆 Talleres
                 </a>
                 <a href="{{ route('asistencia.estudiantes.index', array_merge(request()->query(), ['estado' => 'TARDANZA'])) }}" 
                    class="px-3 py-1.5 rounded-lg transition-colors {{ $filtroEstado === 'TARDANZA' ? 'bg-amber-500 text-white' : 'bg-amber-50 text-amber-700 hover:bg-amber-100 border border-amber-200' }}">
                     ⚠️ Tardanzas
                 </a>
                 <a href="{{ route('asistencia.estudiantes.index', array_merge(request()->query(), ['estado' => 'JUSTIFICADAS'])) }}" 
-                   class="px-3 py-1.5 rounded-lg transition-colors {{ $filtroEstado === 'JUSTIFICADAS' ? 'bg-indigo-600 text-white' : 'bg-indigo-50 text-indigo-700 hover:bg-indigo-100 border border-indigo-200' }}">
+                   class="px-3 py-1.5 rounded-lg transition-colors {{ $filtroEstado === 'JUSTIFICADAS' ? 'bg-emerald-600 text-white' : 'bg-emerald-50 text-emerald-700 hover:bg-emerald-100 border border-emerald-200' }}">
                     🛡️ Justificadas
                 </a>
             </div>
@@ -470,6 +502,8 @@
                 <input type="hidden" name="fecha" value="{{ $fecha }}">
                 @if(!empty($filtroTurno))<input type="hidden" name="turno" value="{{ $filtroTurno }}">@endif
                 @if(!empty($filtroEstado))<input type="hidden" name="estado" value="{{ $filtroEstado }}">@endif
+                @if(!empty($filtroActividad) && $filtroActividad !== 'TODOS')<input type="hidden" name="tipo_actividad" value="{{ $filtroActividad }}">@endif
+                @if(!empty($filtroTallerId))<input type="hidden" name="taller_id" value="{{ $filtroTallerId }}">@endif
 
                 <!-- Buscador por DNI o Apellidos/Nombres -->
                 <div class="sm:col-span-2 lg:col-span-4 relative">
@@ -641,12 +675,25 @@
                                         'Mañana' => 'bg-amber-50 text-amber-700 border-amber-200',
                                         'Tarde' => 'bg-blue-50 text-blue-700 border-blue-200',
                                         'Noche' => 'bg-purple-50 text-purple-700 border-purple-200',
+                                        'Sábado' => 'bg-emerald-50 text-emerald-700 border-emerald-200',
                                     ];
                                     $cls = $badgeColors[$turnoActual] ?? 'bg-slate-100 text-slate-700 border-slate-200';
                                 @endphp
-                                <span class="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-semibold border {{ $cls }}">
-                                    {{ $turnoActual }}
-                                </span>
+                                <div class="space-y-1">
+                                    <span class="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-semibold border {{ $cls }}">
+                                        {{ $turnoActual }}
+                                    </span>
+                                    @if($asistencia->tipo_actividad === 'TALLER')
+                                        <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] font-extrabold bg-indigo-50 text-indigo-700 border border-indigo-200 block max-w-fit" title="Asistencia a Taller Extracurricular">
+                                            <i class="fa-solid fa-shapes text-[9px] text-indigo-500"></i>
+                                            {{ $asistencia->taller->nombre ?? 'Taller' }}
+                                        </span>
+                                    @else
+                                        <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] font-semibold bg-slate-100 text-slate-600 block max-w-fit">
+                                            <i class="fa-solid fa-book-open text-[9px] text-slate-400"></i> Clases
+                                        </span>
+                                    @endif
+                                </div>
                             </td>
                             <td class="py-3.5 px-4 cell-hora-ingreso">
                                 @if($asistencia->hora_ingreso)
@@ -1277,6 +1324,13 @@
         // Ignored during normal viewfinder seeking
     }
 
+    function actualizarActividadEscaneo(val) {
+        const inputHidden = document.getElementById('form-scan-actividad');
+        if (inputHidden) {
+            inputHidden.value = val;
+        }
+    }
+
     // ================= UNIFIED REAL-TIME SCANNING ENGINE (CAMERA & BARCODE GUN) =================
     function procesarEscaneoCodigo(codigoRaw) {
         const codigo = String(codigoRaw || '').trim();
@@ -1315,7 +1369,10 @@
                 "Accept": "application/json",
                 "X-Requested-With": "XMLHttpRequest"
             },
-            body: JSON.stringify({ codigo: codigo })
+            body: JSON.stringify({ 
+                codigo: codigo,
+                actividad: document.getElementById('scan-actividad-selector') ? document.getElementById('scan-actividad-selector').value : 'AUTOMATICO'
+            })
         })
         .then(async response => {
             const data = await response.json();
@@ -1501,6 +1558,7 @@
                             <span class="bg-white/15 text-indigo-200 px-2.5 py-0.5 rounded-lg font-bold">
                                 Turno ${est.turno || 'Mañana'}
                             </span>
+                            ${data.actividad_nombre ? `<span class="bg-indigo-500/30 text-indigo-200 px-2.5 py-0.5 rounded-lg font-bold border border-indigo-400/30">🏆 ${data.actividad_nombre}</span>` : ''}
                         </div>
                     </div>
                 </div>

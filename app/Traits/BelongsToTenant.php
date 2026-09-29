@@ -13,12 +13,12 @@ trait BelongsToTenant
      */
     protected static function bootBelongsToTenant(): void
     {
-        static::addGlobalScope(new TenantScope());
+        static::addGlobalScope(new TenantScope);
 
         static::creating(function ($model) {
             if (empty($model->empresa_id)) {
                 $tenantId = session('empresa_id');
-                if (!$tenantId && auth()->check() && !empty(auth()->user()->empresa_id)) {
+                if (! $tenantId && auth()->check() && ! empty(auth()->user()->empresa_id)) {
                     $tenantId = auth()->user()->empresa_id;
                 }
                 $model->empresa_id = $tenantId ?? 1;

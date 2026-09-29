@@ -2,7 +2,6 @@
 
 namespace Tests\Feature;
 
-use App\Models\Empresa;
 use App\Models\User;
 use Illuminate\Support\Facades\Hash;
 use Tests\TestCase;
@@ -19,6 +18,7 @@ class ValidacionesYEstatusTest extends TestCase
             'login' => '',
             'password' => '',
         ]);
+
         $res->assertSessionHasErrors(['login', 'password']);
 
         // 2. Enviar usuario inexistente
@@ -58,7 +58,7 @@ class ValidacionesYEstatusTest extends TestCase
     public function test_unauthorized_user_receives_403_page(): void
     {
         $vocal = User::withoutGlobalScopes()->where('rol', 'VOCAL_OPERADOR')->first();
-        if (!$vocal) {
+        if (! $vocal) {
             $vocal = User::create([
                 'name' => 'Vocal de Prueba',
                 'username' => 'vocal_test_403',
@@ -73,7 +73,7 @@ class ValidacionesYEstatusTest extends TestCase
         // El vocal intenta entrar a la configuración del sistema (restringido a ADMIN, SECRETARIO, COMITE_VIGILANCIA)
         session(['empresa_id' => 1]);
         $res = $this->actingAs($vocal)->get('/configuracion');
-        
+
         $res->assertStatus(403);
         $res->assertSee('403 &bull; Acceso Restringido', false);
         $res->assertSee('No cuenta con permisos suficientes');
@@ -106,9 +106,9 @@ class ValidacionesYEstatusTest extends TestCase
 
         $res->assertSessionHasErrors(['padre_dni', 'padre_nombres']);
         $errors = session('errors')->getBag('default');
-        
+
         // Verificar que los mensajes estén traducidos al español
-        $this->assertStringContainsString('obligatorio', $errors->first('padre_dni') . $errors->first('padre_nombres'));
+        $this->assertStringContainsString('obligatorio', $errors->first('padre_dni').$errors->first('padre_nombres'));
     }
 
     /**
@@ -255,11 +255,11 @@ class ValidacionesYEstatusTest extends TestCase
         \App\Models\Estudiante::withoutGlobalScopes()->whereIn('dni', [$dniEst1, $dniEst2])->delete();
 
         // 1. Crear archivo CSV de prueba simulando carga masiva
-        $csvContent = "\xEF\xBB\xBF" . "DNI;NOMBRES;APELLIDO_PATERNO;APELLIDO_MATERNO;NIVEL;GRADO;SECCION;TURNO;DNI_APODERADO;PARENTESCO\n";
+        $csvContent = "\xEF\xBB\xBF"."DNI;NOMBRES;APELLIDO_PATERNO;APELLIDO_MATERNO;NIVEL;GRADO;SECCION;TURNO;DNI_APODERADO;PARENTESCO\n";
         $csvContent .= "{$dniEst1};ALUMNO CON APODERADO;GONZALES;RODRIGUEZ;Primaria;2do;A;Mañana;{$padre->padre_dni};HIJO(A)\n";
         $csvContent .= "{$dniEst2};ALUMNO SIN APODERADO;QUISPE;MAMANI;Secundaria;3ro;B;Tarde;;HIJO(A)\n";
 
-        $tempCsv = tempnam(sys_get_temp_dir(), 'test_csv_') . '.csv';
+        $tempCsv = tempnam(sys_get_temp_dir(), 'test_csv_').'.csv';
         file_put_contents($tempCsv, $csvContent);
 
         $uploadedFile = new \Illuminate\Http\UploadedFile(
@@ -454,9 +454,9 @@ class ValidacionesYEstatusTest extends TestCase
 
     public function test_cargos_directiva_sin_duplicados_en_padres_index_y_modal_editar(): void
     {
-        $admin = \App\Models\User::withoutGlobalScopes()->where('email', 'admin@apafa.pe')->first();
-        if (!$admin) {
-            $admin = \App\Models\User::withoutGlobalScopes()->first();
+        $admin = User::withoutGlobalScopes()->where('email', 'admin@apafa.pe')->first();
+        if (! $admin) {
+            $admin = User::withoutGlobalScopes()->first();
         }
 
         $empresaId = $admin->empresa_id ?? 1;
@@ -475,7 +475,7 @@ class ValidacionesYEstatusTest extends TestCase
         }
 
         // 3. Verificar que no existan nombres duplicados
-        $nombres = $cargos->pluck('nombre')->map(fn($n) => mb_strtoupper(trim($n)))->toArray();
+        $nombres = $cargos->pluck('nombre')->map(fn ($n) => mb_strtoupper(trim($n)))->toArray();
         $this->assertCount(count(array_unique($nombres)), $nombres, 'Se encontraron cargos duplicados en la colección de la vista');
 
         // 4. Verificar el HTML renderizado de los dropdowns en ambos modales
@@ -485,19 +485,15 @@ class ValidacionesYEstatusTest extends TestCase
         $this->assertMatchesRegularExpression('/id="editar_padre_cargo_id"/', $html);
         if (preg_match('/<select[^>]*id="editar_padre_cargo_id"[^>]*>(.*?)<\/select>/s', $html, $m)) {
             preg_match_all('/<option\s+value="([^"]*)"[^>]*>(.*?)<\/option>/s', $m[1], $opts, PREG_SET_ORDER);
-            $values = array_map(fn($o) => trim($o[1]), $opts);
+            $values = array_map(fn ($o) => trim($o[1]), $opts);
             $this->assertCount(count(array_unique($values)), $values, 'El modal editar contiene IDs de cargo repetidos');
         }
 
         // Modal Nuevo
         if (preg_match('/<div[^>]*id="modal-nuevo-padre".*?<select[^>]*name="cargo_id"[^>]*>(.*?)<\/select>/s', $html, $mNew)) {
             preg_match_all('/<option\s+value="([^"]*)"[^>]*>(.*?)<\/option>/s', $mNew[1], $optsNew, PREG_SET_ORDER);
-            $valuesNew = array_map(fn($o) => trim($o[1]), $optsNew);
+            $valuesNew = array_map(fn ($o) => trim($o[1]), $optsNew);
             $this->assertCount(count(array_unique($valuesNew)), $valuesNew, 'El modal nuevo contiene IDs de cargo repetidos');
         }
     }
 }
-
-
-
-

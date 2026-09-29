@@ -1,0 +1,97 @@
+services:
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile.dev
+    restart: unless-stopped
+    working_dir: /var/www/html
+    volumes:
+      - .:/var/www/html
+    environment:
+      - APP_ENV=local
+      - APP_DEBUG=true
+      - APP_URL=http://localhost:8080
+      - DB_CONNECTION=mysql
+      - DB_HOST=db
+      - DB_PORT=3306
+      - DB_DATABASE=sis_apafa
+      - DB_USERNAME=sis_apafa_user
+      - DB_PASSWORD=SecretPassword2026!
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+    depends_on:
+      db:
+        condition: service_healthy
+    networks:
+      - apafa-dev-network
+
+  web:
+    image: nginx:alpine
+    container_name: apafa_web
+    restart: unless-stopped
+    ports:
+      - "8080:80"
+    volumes:
+      - .:/var/www/html
+      - ./docker/nginx/default.conf:/etc/nginx/conf.d/default.conf:ro
+    depends_on:
+      - app
+    networks:
+      - apafa-dev-network
+
+  db:
+    image: mysql:8.0
+    container_name: apafa_db
+    restart: unless-stopped
+    command: --default-authentication-plugin=mysql_native_password --character-set-server=utf8mb4 --collation-server=utf8mb4_unicode_ci
+    ports:
+      - "3307:3306"
+    environment:
+      MYSQL_ROOT_PASSWORD: RootSecret2026!
+      MYSQL_DATABASE: sis_apafa
+      MYSQL_USER: sis_apafa_user
+      MYSQL_PASSWORD: SecretPassword2026!
+    volumes:
+      - apafa_db_data:/var/lib/mysql
+    networks:
+      - apafa-dev-network
+    healthcheck:
+      test: ["CMD-SHELL", "mysqladmin ping -h localhost -uroot -pRootSecret2026! || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 20
+      start_period: 30s
+
+  redis:
+    image: redis:7-alpine
+    container_name: apafa_redis
+    restart: unless-stopped
+    ports:
+      - "6380:6379"
+    volumes:
+      - apafa_redis_data:/data
+    networks:
+      - apafa-dev-network
+
+  phpmyadmin:
+    image: phpmyadmin:latest
+    container_name: apafa_phpmyadmin
+    restart: unless-stopped
+    ports:
+      - "8081:80"
+    environment:
+      PMA_HOST: db
+      PMA_PORT: 3306
+      UPLOAD_LIMIT: 64M
+    depends_on:
+      - db
+    networks:
+      - apafa-dev-network
+
+networks:
+  apafa-dev-network:
+    driver: bridge
+
+volumes:
+  apafa_db_data:
+  apafa_redis_data:

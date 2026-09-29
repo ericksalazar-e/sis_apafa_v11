@@ -20,11 +20,22 @@ class Empresa extends Model
         'telefono',
         'correo',
         'periodo_apafa',
+        'saldo_inicial_caja',
+        'fecha_saldo_inicial',
+        'glosa_saldo_inicial',
+        'sustento_saldo_inicial',
+        'anio_lectivo_actual',
         'lema',
         'nivel_educativo',
         'director_nombre',
         'foto_institucion',
         'foto_ugel',
+    ];
+
+    protected $casts = [
+        'saldo_inicial_caja' => 'decimal:2',
+        'fecha_saldo_inicial' => 'date',
+        'anio_lectivo_actual' => 'integer',
     ];
 
     public function getLogoUrlAttribute(): ?string
@@ -35,6 +46,7 @@ class Empresa extends Model
         if (str_starts_with($this->foto_institucion, 'http')) {
             return $this->foto_institucion;
         }
+
         return asset($this->foto_institucion);
     }
 

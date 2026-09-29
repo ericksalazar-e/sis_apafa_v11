@@ -13,7 +13,7 @@ return new class extends Migration
     {
         if (Schema::hasTable('comicios_electorales')) {
             Schema::table('comicios_electorales', function (Blueprint $table) {
-                if (!Schema::hasColumn('comicios_electorales', 'comite_presidente_nombre')) {
+                if (! Schema::hasColumn('comicios_electorales', 'comite_presidente_nombre')) {
                     $table->string('comite_presidente_nombre')->nullable();
                     $table->string('comite_presidente_dni', 20)->nullable();
                     $table->string('comite_secretario_nombre')->nullable();

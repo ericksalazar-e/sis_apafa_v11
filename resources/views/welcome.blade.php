@@ -4,6 +4,21 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Portal de Asistencias y Cuotas para Padres de Familia - SIS-APAFA</title>
+
+    <!-- Favicon del Navegador (Logo Dinámico Institucional) -->
+    @php
+        $favWelcome = $empresa->foto_institucion 
+            ?? \App\Models\Empresa::find(session('empresa_id') ?? 1)?->foto_institucion 
+            ?? \App\Models\Empresa::first()?->foto_institucion 
+            ?? 'favicon.png';
+        $favVerW = file_exists(public_path($favWelcome)) ? filemtime(public_path($favWelcome)) : time();
+    @endphp
+    <link rel="icon" type="image/png" sizes="32x32" href="{{ asset('favicon-32x32.png') }}?v={{ $favVerW }}">
+    <link rel="icon" type="image/png" sizes="16x16" href="{{ asset('favicon-16x16.png') }}?v={{ $favVerW }}">
+    <link rel="icon" type="image/x-icon" href="{{ asset('favicon.ico') }}?v={{ $favVerW }}">
+    <link rel="shortcut icon" href="{{ asset('favicon.ico') }}?v={{ $favVerW }}">
+    <link rel="apple-touch-icon" sizes="180x180" href="{{ asset('apple-touch-icon.png') }}?v={{ $favVerW }}">
+
     <!-- Tailwind CSS CDN -->
     <script src="https://cdn.tailwindcss.com"></script>
     <!-- Google Fonts -->
@@ -27,7 +42,7 @@
                 <a href="{{ route('home') }}" class="flex items-center gap-3 group">
                     @if(!empty($empresa->foto_institucion))
                         <div class="w-10 h-10 sm:w-11 sm:h-11 rounded-2xl bg-white p-1 border border-slate-200 flex items-center justify-center font-bold text-lg shadow-md group-hover:scale-105 transition-transform overflow-hidden">
-                            <img src="{{ asset($empresa->foto_institucion) }}" alt="Logo" class="max-h-full max-w-full object-contain">
+                            <img src="{{ asset($empresa->foto_institucion) }}" alt="Logo" class="max-h-full max-w-full object-contain" onerror="this.parentElement.innerHTML='<div class=\'w-full h-full bg-gradient-to-tr from-indigo-600 to-violet-600 text-white flex items-center justify-center font-bold text-lg rounded-xl\'><i class=\'fa-solid fa-graduation-cap\'></i></div>';">
                         </div>
                     @else
                         <div class="w-10 h-10 sm:w-11 sm:h-11 rounded-2xl bg-gradient-to-tr from-indigo-600 to-violet-600 text-white flex items-center justify-center font-bold text-lg shadow-md shadow-indigo-600/20 group-hover:scale-105 transition-transform">

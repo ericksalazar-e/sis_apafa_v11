@@ -183,7 +183,15 @@
             <div class="grid grid-cols-2 gap-3">
                 <div>
                     <label class="block font-semibold text-slate-700 mb-1">DNI (8 dígitos) *</label>
-                    <input type="text" name="padre_dni" maxlength="8" pattern="[0-9]{8}" required class="w-full px-3 py-2 border border-slate-200 rounded-xl focus:ring-2 focus:ring-indigo-500 font-mono">
+                    <div class="relative">
+                        <input type="text" name="padre_dni" id="nuevo_padre_dni" maxlength="8" pattern="[0-9]{8}" required 
+                               placeholder="8 dígitos"
+                               class="w-full px-3 py-2 border border-slate-200 rounded-xl focus:ring-2 focus:ring-indigo-500 font-mono transition-colors">
+                        <span id="nuevo_padre_dni_spinner" class="hidden absolute right-3 top-2.5 text-slate-400 text-xs">
+                            <i class="fa-solid fa-circle-notch fa-spin"></i>
+                        </span>
+                    </div>
+                    <div id="nuevo_padre_dni_feedback" class="mt-1 text-[11px] leading-tight hidden font-medium"></div>
                 </div>
                 <div>
                     <label class="block font-semibold text-slate-700 mb-1">Celular</label>
@@ -272,7 +280,7 @@
                 <button type="button" onclick="document.getElementById('modal-nuevo-padre').classList.add('hidden')" class="px-4 py-2 text-slate-600 hover:bg-slate-100 rounded-xl font-semibold">
                     Cancelar
                 </button>
-                <button type="submit" class="px-5 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl font-bold shadow-md shadow-indigo-600/30">
+                <button type="submit" id="btn-guardar-nuevo-padre" class="px-5 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl font-bold shadow-md shadow-indigo-600/30 transition-all">
                     Guardar Asociado
                 </button>
             </div>
@@ -302,8 +310,14 @@
             <div class="grid grid-cols-2 gap-3">
                 <div>
                     <label class="block font-semibold text-slate-700 mb-1">DNI (8 dígitos) *</label>
-                    <input type="text" name="padre_dni" id="editar_padre_dni" maxlength="8" pattern="[0-9]{8}" required 
-                           class="w-full px-3 py-2 border border-slate-200 rounded-xl focus:ring-2 focus:ring-indigo-500 font-mono font-bold bg-amber-50/50">
+                    <div class="relative">
+                        <input type="text" name="padre_dni" id="editar_padre_dni" maxlength="8" pattern="[0-9]{8}" required 
+                               class="w-full px-3 py-2 border border-slate-200 rounded-xl focus:ring-2 focus:ring-indigo-500 font-mono font-bold bg-amber-50/50 transition-colors">
+                        <span id="editar_padre_dni_spinner" class="hidden absolute right-3 top-2.5 text-slate-400 text-xs">
+                            <i class="fa-solid fa-circle-notch fa-spin"></i>
+                        </span>
+                    </div>
+                    <div id="editar_padre_dni_feedback" class="mt-1 text-[11px] leading-tight hidden font-medium"></div>
                     <span class="text-[10px] text-amber-700 font-semibold mt-0.5 block">Corregir si hubo error de digitación</span>
                 </div>
                 <div>
@@ -393,7 +407,7 @@
                 <button type="button" onclick="document.getElementById('modal-editar-padre').classList.add('hidden')" class="px-4 py-2 text-slate-600 hover:bg-slate-100 rounded-xl font-semibold">
                     Cancelar
                 </button>
-                <button type="submit" class="px-5 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl font-bold shadow-md shadow-indigo-600/30 flex items-center gap-1.5">
+                <button type="submit" id="btn-guardar-editar-padre" class="px-5 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl font-bold shadow-md shadow-indigo-600/30 flex items-center gap-1.5 transition-all">
                     <i class="fa-solid fa-floppy-disk"></i>
                     Guardar Cambios
                 </button>
@@ -425,8 +439,21 @@ function toggleConyugeBox() {
 }
 
 function abrirModalEditarPadre(padre) {
+    idPadreEnEdicion = padre.id;
     const form = document.getElementById('form-editar-padre');
     form.action = `/padres/${padre.id}`;
+
+    if (feedbackDniEditar) {
+        feedbackDniEditar.classList.add('hidden');
+        feedbackDniEditar.textContent = '';
+    }
+    if (inputDniEditar) {
+        inputDniEditar.classList.remove('border-rose-500', 'bg-rose-50/40', 'border-emerald-500', 'bg-emerald-50/20');
+    }
+    if (btnSubmitEditar) {
+        btnSubmitEditar.disabled = false;
+        btnSubmitEditar.classList.remove('opacity-50', 'cursor-not-allowed');
+    }
 
     document.getElementById('editar_padre_dni').value = padre.padre_dni || '';
     document.getElementById('editar_padre_celular').value = padre.celular || '';
@@ -483,6 +510,118 @@ function verificarParentescoAmbosEditar() {
         chk.checked = true;
     }
     toggleConyugeBoxEditar();
+}
+
+// -------------------------------------------------------------
+// VALIDACIÓN EN TIEMPO REAL DE DNI DUPLICADO (PADRES DE FAMILIA)
+// -------------------------------------------------------------
+let idPadreEnEdicion = null;
+let timerDniNuevo = null;
+let timerDniEditar = null;
+
+const inputDniNuevo = document.getElementById('nuevo_padre_dni');
+const feedbackDniNuevo = document.getElementById('nuevo_padre_dni_feedback');
+const spinnerDniNuevo = document.getElementById('nuevo_padre_dni_spinner');
+const btnSubmitNuevo = document.getElementById('btn-guardar-nuevo-padre');
+
+if (inputDniNuevo) {
+    inputDniNuevo.addEventListener('input', function() {
+        clearTimeout(timerDniNuevo);
+        this.value = this.value.replace(/\D/g, '');
+        const dni = this.value;
+
+        if (dni.length < 8) {
+            feedbackDniNuevo.classList.add('hidden');
+            feedbackDniNuevo.textContent = '';
+            inputDniNuevo.classList.remove('border-rose-500', 'bg-rose-50/40', 'border-emerald-500', 'bg-emerald-50/20');
+            btnSubmitNuevo.disabled = false;
+            btnSubmitNuevo.classList.remove('opacity-50', 'cursor-not-allowed');
+            return;
+        }
+
+        if (dni.length === 8) {
+            spinnerDniNuevo.classList.remove('hidden');
+            timerDniNuevo = setTimeout(() => {
+                fetch(`{{ route('padres.verificar_dni') }}?dni=${encodeURIComponent(dni)}`)
+                    .then(r => r.json())
+                    .then(data => {
+                        spinnerDniNuevo.classList.add('hidden');
+                        feedbackDniNuevo.classList.remove('hidden');
+                        if (data.existe) {
+                            inputDniNuevo.classList.remove('border-emerald-500', 'bg-emerald-50/20');
+                            inputDniNuevo.classList.add('border-rose-500', 'bg-rose-50/40');
+                            feedbackDniNuevo.className = 'mt-1 text-[11px] leading-tight font-bold text-rose-700 bg-rose-50 border border-rose-200 rounded-xl p-2.5';
+                            feedbackDniNuevo.innerHTML = `<i class="fa-solid fa-triangle-exclamation mr-1 text-rose-600"></i> ${data.mensaje}`;
+                            btnSubmitNuevo.disabled = true;
+                            btnSubmitNuevo.classList.add('opacity-50', 'cursor-not-allowed');
+                        } else {
+                            inputDniNuevo.classList.remove('border-rose-500', 'bg-rose-50/40');
+                            inputDniNuevo.classList.add('border-emerald-500', 'bg-emerald-50/20');
+                            feedbackDniNuevo.className = 'mt-1 text-[11px] leading-tight font-semibold text-emerald-600';
+                            feedbackDniNuevo.innerHTML = `<i class="fa-solid fa-circle-check mr-1"></i> DNI disponible para registro`;
+                            btnSubmitNuevo.disabled = false;
+                            btnSubmitNuevo.classList.remove('opacity-50', 'cursor-not-allowed');
+                        }
+                    })
+                    .catch(() => {
+                        spinnerDniNuevo.classList.add('hidden');
+                    });
+            }, 250);
+        }
+    });
+}
+
+const inputDniEditar = document.getElementById('editar_padre_dni');
+const feedbackDniEditar = document.getElementById('editar_padre_dni_feedback');
+const spinnerDniEditar = document.getElementById('editar_padre_dni_spinner');
+const btnSubmitEditar = document.getElementById('btn-guardar-editar-padre');
+
+if (inputDniEditar) {
+    inputDniEditar.addEventListener('input', function() {
+        clearTimeout(timerDniEditar);
+        this.value = this.value.replace(/\D/g, '');
+        const dni = this.value;
+
+        if (dni.length < 8) {
+            feedbackDniEditar.classList.add('hidden');
+            feedbackDniEditar.textContent = '';
+            inputDniEditar.classList.remove('border-rose-500', 'bg-rose-50/40', 'border-emerald-500', 'bg-emerald-50/20');
+            btnSubmitEditar.disabled = false;
+            btnSubmitEditar.classList.remove('opacity-50', 'cursor-not-allowed');
+            return;
+        }
+
+        if (dni.length === 8) {
+            spinnerDniEditar.classList.remove('hidden');
+            timerDniEditar = setTimeout(() => {
+                const ignoreParam = idPadreEnEdicion ? `&ignore_id=${idPadreEnEdicion}` : '';
+                fetch(`{{ route('padres.verificar_dni') }}?dni=${encodeURIComponent(dni)}${ignoreParam}`)
+                    .then(r => r.json())
+                    .then(data => {
+                        spinnerDniEditar.classList.add('hidden');
+                        feedbackDniEditar.classList.remove('hidden');
+                        if (data.existe) {
+                            inputDniEditar.classList.remove('border-emerald-500', 'bg-emerald-50/20');
+                            inputDniEditar.classList.add('border-rose-500', 'bg-rose-50/40');
+                            feedbackDniEditar.className = 'mt-1 text-[11px] leading-tight font-bold text-rose-700 bg-rose-50 border border-rose-200 rounded-xl p-2.5';
+                            feedbackDniEditar.innerHTML = `<i class="fa-solid fa-triangle-exclamation mr-1 text-rose-600"></i> ${data.mensaje}`;
+                            btnSubmitEditar.disabled = true;
+                            btnSubmitEditar.classList.add('opacity-50', 'cursor-not-allowed');
+                        } else {
+                            inputDniEditar.classList.remove('border-rose-500', 'bg-rose-50/40');
+                            inputDniEditar.classList.add('border-emerald-500', 'bg-emerald-50/20');
+                            feedbackDniEditar.className = 'mt-1 text-[11px] leading-tight font-semibold text-emerald-600';
+                            feedbackDniEditar.innerHTML = `<i class="fa-solid fa-circle-check mr-1"></i> DNI disponible y válido`;
+                            btnSubmitEditar.disabled = false;
+                            btnSubmitEditar.classList.remove('opacity-50', 'cursor-not-allowed');
+                        }
+                    })
+                    .catch(() => {
+                        spinnerDniEditar.classList.add('hidden');
+                    });
+            }, 250);
+        }
+    });
 }
 </script>
 @endsection

@@ -46,8 +46,9 @@ class ReunionController extends Controller
 
         if ($existeReunion) {
             $horaExistente = $existeReunion->hora ? substr($existeReunion->hora, 0, 5) : '';
+
             return back()->withInput()->withErrors([
-                'fecha' => "Fecha no disponible: Ya existe la asamblea '{$existeReunion->titulo}' programada para el día {$fechaFormateada}" . ($horaExistente ? " a las {$horaExistente}" : "") . ". Por normativa institucional de APAFA, no se permite programar más de una reunión o asamblea en la misma fecha."
+                'fecha' => "Fecha no disponible: Ya existe la asamblea '{$existeReunion->titulo}' programada para el día {$fechaFormateada}".($horaExistente ? " a las {$horaExistente}" : '').'. Por normativa institucional de APAFA, no se permite programar más de una reunión o asamblea en la misma fecha.',
             ]);
         }
 
@@ -118,11 +119,12 @@ class ReunionController extends Controller
 
         $padre = PadreFamilia::where('padre_dni', $dni)->first();
 
-        if (!$padre) {
+        if (! $padre) {
             $msg = "El DNI {$dni} no pertenece a ningún padre registrado en esta institución.";
             if ($request->wantsJson() || $request->ajax()) {
                 return response()->json(['success' => false, 'message' => $msg], 404);
             }
+
             return back()->withErrors(['dni' => $msg]);
         }
 
@@ -130,7 +132,7 @@ class ReunionController extends Controller
             ->where('padre_familia_id', $padre->id)
             ->first();
 
-        if (!$registro) {
+        if (! $registro) {
             $registro = ReunionPadre::create([
                 'empresa_id' => $padre->empresa_id ?? session('empresa_id') ?? 1,
                 'reunion_id' => $reunion->id,
@@ -157,7 +159,7 @@ class ReunionController extends Controller
                     'nombre' => $padre->nombre_completo,
                     'dni' => $padre->padre_dni,
                     'asistencia' => $horaReg,
-                ]
+                ],
             ]);
         }
 

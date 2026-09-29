@@ -14,12 +14,12 @@ class TenantScope implements Scope
     public function apply(Builder $builder, Model $model): void
     {
         $tenantId = session('empresa_id');
-        if (!$tenantId && auth()->check() && auth()->user()->empresa_id) {
+        if (! $tenantId && auth()->check() && auth()->user()->empresa_id) {
             $tenantId = auth()->user()->empresa_id;
         }
 
         if ($tenantId) {
-            $builder->where($model->getTable() . '.empresa_id', $tenantId);
+            $builder->where($model->getTable().'.empresa_id', $tenantId);
         }
     }
 }

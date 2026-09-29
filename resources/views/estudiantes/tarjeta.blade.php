@@ -94,70 +94,81 @@
             display: flex;
             flex-direction: column;
             justify-content: space-between;
-            padding: 3.5mm 4.5mm;
+            padding: 2.8mm 3.8mm;
             border: 1px solid #e2e8f0;
         }
 
         /* ================= CARA A: ANVERSO ================= */
         .cara-anverso {
             background: linear-gradient(135deg, #ffffff 0%, #f8fafc 100%);
-            border-top: 4px solid #4f46e5;
+            border-top: 3.5px solid #4f46e5;
         }
 
         .anverso-header {
             display: flex;
             align-items: center;
-            gap: 8px;
-            border-bottom: 1.5px solid #e2e8f0;
-            padding-bottom: 2.5mm;
+            gap: 7px;
+            border-bottom: 1px solid #e2e8f0;
+            padding-bottom: 1.5mm;
+            flex-shrink: 0;
         }
 
         .insignia-logo {
-            width: 10.5mm;
-            height: 10.5mm;
+            width: 9.5mm;
+            height: 9.5mm;
+            min-width: 9.5mm;
             background: linear-gradient(135deg, #4f46e5, #7c3aed);
             border-radius: 2mm;
             display: flex;
             align-items: center;
             justify-content: center;
             color: white;
-            font-size: 16px;
+            font-size: 15px;
             flex-shrink: 0;
-            box-shadow: 0 2px 4px rgba(79, 70, 229, 0.3);
+            box-shadow: 0 2px 4px rgba(79, 70, 229, 0.25);
         }
 
         .header-text {
             flex: 1;
+            min-width: 0;
             line-height: 1.15;
         }
 
         .header-text h1 {
-            font-size: 8.5pt;
+            font-size: 7.8pt;
             font-weight: 800;
             color: #1e1b4b;
             text-transform: uppercase;
             letter-spacing: -0.2px;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            margin: 0;
         }
 
         .header-text p {
-            font-size: 6.5pt;
+            font-size: 5.6pt;
             font-weight: 700;
             color: #4f46e5;
             text-transform: uppercase;
             margin-top: 1px;
+            letter-spacing: 0.2px;
         }
 
         .anverso-body {
             display: flex;
-            gap: 8px;
+            gap: 7px;
             align-items: center;
-            margin: 2mm 0;
+            margin: 1.2mm 0;
+            flex: 1;
+            min-height: 0;
         }
 
         .foto-estudiante {
-            width: 17mm;
-            height: 21mm;
-            background: #f1f5f9;
+            width: 15.5mm;
+            height: 19.5mm;
+            min-width: 15.5mm;
+            background: #f8fafc;
             border: 1px dashed #cbd5e1;
             border-radius: 2mm;
             display: flex;
@@ -165,111 +176,139 @@
             align-items: center;
             justify-content: center;
             color: #94a3b8;
-            font-size: 18px;
+            font-size: 16px;
             flex-shrink: 0;
         }
         .foto-estudiante span {
-            font-size: 5pt;
+            font-size: 4.5pt;
             text-transform: uppercase;
-            margin-top: 2px;
+            margin-top: 1px;
             font-weight: 600;
         }
 
         .datos-estudiante {
             flex: 1;
-            font-size: 7pt;
-            line-height: 1.35;
+            min-width: 0;
+            font-size: 6.5pt;
+            line-height: 1.25;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            gap: 1.5px;
         }
 
         .dato-item {
-            margin-bottom: 1.5px;
+            margin-bottom: 0;
         }
 
         .dato-label {
-            font-size: 5.5pt;
+            font-size: 4.8pt;
             font-weight: 700;
             color: #64748b;
             text-transform: uppercase;
             letter-spacing: 0.2px;
+            display: block;
+            line-height: 1;
         }
 
         .dato-valor {
-            font-size: 7.5pt;
+            font-size: 7pt;
             font-weight: 800;
             color: #0f172a;
             text-transform: uppercase;
+            line-height: 1.15;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
         }
 
         .anverso-footer {
             display: flex;
             justify-content: space-between;
-            align-items: flex-end;
-            padding-top: 1.5mm;
-            border-top: 1px solid #f1f5f9;
+            align-items: center;
+            padding-top: 1.2mm;
+            border-top: 1px solid #e2e8f0;
+            margin-top: auto;
+            flex-shrink: 0;
         }
 
         .correlativo-box {
-            background: #fff1f2;
-            border: 1px solid #fecdd3;
-            color: #e11d48;
+            background: #ffe4e6;
+            border: 1.5px solid #f43f5e;
+            color: #9f1239;
             font-family: 'Share Tech Mono', monospace;
-            font-size: 7.5pt;
+            font-size: 7pt;
             font-weight: 800;
-            padding: 1.5px 6px;
+            padding: 1.5px 7px;
             border-radius: 4px;
-            letter-spacing: 0.5px;
+            letter-spacing: 0.6px;
+            line-height: 1.1;
+            display: inline-flex;
+            align-items: center;
+            gap: 3px;
+            box-shadow: 0 1px 2px rgba(244, 63, 94, 0.15);
+            white-space: nowrap;
         }
 
         .tag-apafa {
-            font-size: 6pt;
+            font-size: 5.5pt;
             font-weight: 800;
             color: #475569;
             text-transform: uppercase;
+            letter-spacing: 0.3px;
+            display: inline-flex;
+            align-items: center;
+            gap: 3px;
         }
 
         /* ================= CARA B: REVERSO ================= */
         .cara-reverso {
             background: #ffffff;
-            border-top: 4px solid #0f172a;
+            border-top: 3.5px solid #0f172a;
         }
 
         .reverso-header {
             display: flex;
             justify-content: space-between;
             align-items: center;
-            border-bottom: 1.5px solid #e2e8f0;
-            padding-bottom: 1.5mm;
+            border-bottom: 1px solid #e2e8f0;
+            padding-bottom: 1.2mm;
+            flex-shrink: 0;
         }
 
         .reverso-header h3 {
-            font-size: 7.5pt;
+            font-size: 7.2pt;
             font-weight: 800;
             color: #0f172a;
             text-transform: uppercase;
             letter-spacing: 0.3px;
+            margin: 0;
         }
 
         .datos-apoderado {
             background: #f8fafc;
             border: 1px solid #f1f5f9;
-            border-radius: 5px;
-            padding: 1.5mm 2.5mm;
-            font-size: 6.5pt;
-            line-height: 1.25;
-            margin: 1.5mm 0;
+            border-radius: 4px;
+            padding: 1.2mm 2.2mm;
+            font-size: 6.2pt;
+            line-height: 1.2;
+            margin: 1.2mm 0;
+            flex-shrink: 0;
         }
 
         .tecnologia-row {
             display: flex;
             align-items: center;
             justify-content: space-between;
-            gap: 8px;
+            gap: 7px;
             margin: 1mm 0;
+            flex: 1;
+            min-height: 0;
         }
 
         .qr-box {
-            width: 17mm;
-            height: 17mm;
+            width: 16.5mm;
+            height: 16.5mm;
             flex-shrink: 0;
             border: 1px solid #e2e8f0;
             border-radius: 3px;
@@ -291,7 +330,7 @@
 
         .barcode-box svg {
             width: 100%;
-            height: 13mm;
+            height: 12.5mm;
         }
 
         .nota-legal {
@@ -300,8 +339,9 @@
             text-align: center;
             line-height: 1.2;
             border-top: 1px solid #f1f5f9;
-            padding-top: 1mm;
+            padding-top: 0.8mm;
             margin-top: auto;
+            flex-shrink: 0;
         }
 
         /* Reglas de Impresión y Generación PDF */
@@ -355,7 +395,7 @@
             <div class="anverso-header">
                 <div class="insignia-logo">
                     @if(!empty($estudiante->empresa->foto_institucion))
-                        <img src="{{ asset($estudiante->empresa->foto_institucion) }}" alt="Logo" style="max-width: 100%; max-height: 100%; object-fit: contain;">
+                        <img src="{{ asset($estudiante->empresa->foto_institucion) }}" alt="Logo" style="max-width: 100%; max-height: 100%; object-fit: contain;" onerror="this.parentElement.innerHTML='<i class=\'fa-solid fa-graduation-cap\'></i>';">
                     @else
                         <i class="fa-solid fa-graduation-cap"></i>
                     @endif
@@ -396,9 +436,12 @@
 
             <!-- Elemento de Control -->
             <div class="anverso-footer">
-                <span class="tag-apafa">TARJETA DE ASISTENCIA</span>
-                <div class="correlativo-box">
-                    {{ $estudiante->correlativo ?? 'N° 00245 - 2026' }}
+                <span class="tag-apafa">
+                    <i class="fa-solid fa-id-card-clip" style="color: #6366f1;"></i> TARJETA DE ASISTENCIA
+                </span>
+                <div class="correlativo-box" title="Código Correlativo Oficial">
+                    <i class="fa-solid fa-hashtag" style="font-size: 5.5pt; opacity: 0.75;"></i>
+                    <span>{{ $estudiante->correlativo ?? ('N° ' . str_pad($estudiante->id, 5, '0', STR_PAD_LEFT) . ' - ' . date('Y')) }}</span>
                 </div>
             </div>
         </div>

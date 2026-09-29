@@ -11,7 +11,7 @@ use Illuminate\Notifications\Notifiable;
 class User extends Authenticatable
 {
     /** @use HasFactory<\Database\Factories\UserFactory> */
-    use HasFactory, Notifiable, BelongsToTenant;
+    use BelongsToTenant, HasFactory, Notifiable;
 
     /**
      * The attributes that are mass assignable.
@@ -105,6 +105,7 @@ class User extends Authenticatable
         }
 
         $rolesArray = is_array($roles) ? $roles : func_get_args();
+
         return in_array($this->rol, $rolesArray);
     }
 
@@ -144,7 +145,7 @@ class User extends Authenticatable
             'COMITE_VIGILANCIA' => '<span class="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-bold bg-amber-50 text-amber-700 border border-amber-200"><i class="fa-solid fa-eye text-[10px]"></i> Vigilancia (Auditoría)</span>',
             'VOCAL_OPERADOR' => '<span class="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-bold bg-cyan-50 text-cyan-700 border border-cyan-200"><i class="fa-solid fa-qrcode text-[10px]"></i> Vocal / Operador</span>',
             'DIRECTOR' => '<span class="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-bold bg-slate-100 text-slate-800 border border-slate-300"><i class="fa-solid fa-school text-[10px]"></i> Director I.E.</span>',
-            default => '<span class="px-2 py-0.5 rounded text-xs bg-slate-100 text-slate-600">' . e($this->rol) . '</span>',
+            default => '<span class="px-2 py-0.5 rounded text-xs bg-slate-100 text-slate-600">'.e($this->rol).'</span>',
         };
     }
 }

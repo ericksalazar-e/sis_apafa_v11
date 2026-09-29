@@ -2,11 +2,11 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\Empresa;
 use App\Models\Faena;
 use App\Models\FaenaAsistencia;
 use App\Models\PadreFamilia;
 use App\Models\Pago;
-use App\Models\Empresa;
 use Illuminate\Http\Request;
 
 class FaenaController extends Controller
@@ -42,7 +42,7 @@ class FaenaController extends Controller
         ]);
 
         // Verificación estricta de seguridad: Prohibir demoliciones, derribo de torres y trabajos de alto riesgo (Ley 29783)
-        $textoAnalizar = strtolower($request->titulo . ' ' . ($request->descripcion ?? ''));
+        $textoAnalizar = strtolower($request->titulo.' '.($request->descripcion ?? ''));
         $terminosPeligrosos = ['tumbar', 'tumben', 'demoler', 'demolicion', 'derribar', 'torre', 'alta tension', 'tanque elevado', 'fosa septica', 'pozo ciego'];
 
         foreach ($terminosPeligrosos as $termino) {
@@ -89,7 +89,7 @@ class FaenaController extends Controller
         $padreId = $request->input('padre_familia_id');
         $queryText = trim($request->input('dni_o_qr', ''));
 
-        if (!$padreId && !empty($queryText)) {
+        if (! $padreId && ! empty($queryText)) {
             // Si viene de escaneo QR (ej: APAFA-PADRE-00001 o DNI)
             if (preg_match('/APAFA-PADRE-(\d+)/', $queryText, $matches)) {
                 $padreId = (int) $matches[1];
@@ -103,10 +103,11 @@ class FaenaController extends Controller
             }
         }
 
-        if (!$padreId) {
+        if (! $padreId) {
             if ($request->wantsJson()) {
                 return response()->json(['success' => false, 'message' => 'No se encontró el padre de familia con el DNI o QR escaneado.'], 404);
             }
+
             return back()->with('error', 'Padre de familia no encontrado.');
         }
 
@@ -121,10 +122,11 @@ class FaenaController extends Controller
             if ($request->wantsJson()) {
                 return response()->json([
                     'success' => false,
-                    'message' => "El padre {$padre->apellidos}, {$padre->nombres} ya tiene asistencia registrada en esta faena."
+                    'message' => "El padre {$padre->apellidos}, {$padre->nombres} ya tiene asistencia registrada en esta faena.",
                 ], 422);
             }
-            return back()->with('error', "El padre ya tiene asistencia registrada en esta faena.");
+
+            return back()->with('error', 'El padre ya tiene asistencia registrada en esta faena.');
         }
 
         $montoCompensado = (float) ($request->input('monto_compensado') ?? $faena->valor_compensacion);
@@ -162,7 +164,7 @@ class FaenaController extends Controller
         if ($request->wantsJson()) {
             return response()->json([
                 'success' => true,
-                'message' => "Asistencia registrada y compensación de S/ " . number_format($montoCompensado, 2) . " aplicada a {$padre->apellidos}, {$padre->nombres}.",
+                'message' => 'Asistencia registrada y compensación de S/ '.number_format($montoCompensado, 2)." aplicada a {$padre->apellidos}, {$padre->nombres}.",
                 'padre' => [
                     'id' => $padre->id,
                     'nombre_completo' => "{$padre->apellidos}, {$padre->nombres}",
@@ -173,7 +175,7 @@ class FaenaController extends Controller
             ]);
         }
 
-        return back()->with('success', "Asistencia registrada y cuota compensada (S/ " . number_format($montoCompensado, 2) . ") a favor de {$padre->apellidos}, {$padre->nombres}.");
+        return back()->with('success', 'Asistencia registrada y cuota compensada (S/ '.number_format($montoCompensado, 2).") a favor de {$padre->apellidos}, {$padre->nombres}.");
     }
 
     /**

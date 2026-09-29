@@ -14,25 +14,25 @@ return new class extends Migration
     {
         // 1. Campos de Fraccionamiento y Compensación en tabla pagos
         Schema::table('pagos', function (Blueprint $table) {
-            if (!Schema::hasColumn('pagos', 'modalidad')) {
+            if (! Schema::hasColumn('pagos', 'modalidad')) {
                 $table->string('modalidad', 50)->default('CONTADO')->after('monto_pago'); // CONTADO, FRACCIONADO, COMPENSACION_FAENA
             }
-            if (!Schema::hasColumn('pagos', 'numero_cuota')) {
+            if (! Schema::hasColumn('pagos', 'numero_cuota')) {
                 $table->integer('numero_cuota')->default(1)->after('modalidad');
             }
-            if (!Schema::hasColumn('pagos', 'total_cuotas')) {
+            if (! Schema::hasColumn('pagos', 'total_cuotas')) {
                 $table->integer('total_cuotas')->default(1)->after('numero_cuota');
             }
-            if (!Schema::hasColumn('pagos', 'saldo_pendiente')) {
+            if (! Schema::hasColumn('pagos', 'saldo_pendiente')) {
                 $table->decimal('saldo_pendiente', 10, 2)->default(0.00)->after('total_cuotas');
             }
-            if (!Schema::hasColumn('pagos', 'faena_id')) {
+            if (! Schema::hasColumn('pagos', 'faena_id')) {
                 $table->unsignedBigInteger('faena_id')->nullable()->after('saldo_pendiente');
             }
         });
 
         // 2. Tabla Faenas Escolares y Servicios Comunales
-        if (!Schema::hasTable('faenas')) {
+        if (! Schema::hasTable('faenas')) {
             Schema::create('faenas', function (Blueprint $table) {
                 $table->id();
                 $table->foreignId('empresa_id')->default(1)->constrained('empresas')->onDelete('cascade');
@@ -48,7 +48,7 @@ return new class extends Migration
         }
 
         // 3. Asistencia a Faenas y Compensaciones de Padres
-        if (!Schema::hasTable('faena_asistencias')) {
+        if (! Schema::hasTable('faena_asistencias')) {
             Schema::create('faena_asistencias', function (Blueprint $table) {
                 $table->id();
                 $table->foreignId('faena_id')->constrained('faenas')->onDelete('cascade');
@@ -62,7 +62,7 @@ return new class extends Migration
         }
 
         // 4. Comicios Electorales (Inicio 1 de Setiembre - D.S. 007-2026-MINEDU)
-        if (!Schema::hasTable('comicios_electorales')) {
+        if (! Schema::hasTable('comicios_electorales')) {
             Schema::create('comicios_electorales', function (Blueprint $table) {
                 $table->id();
                 $table->foreignId('empresa_id')->default(1)->constrained('empresas')->onDelete('cascade');
@@ -76,7 +76,7 @@ return new class extends Migration
         }
 
         // 5. Padrón y Votos Electorales
-        if (!Schema::hasTable('votos_padron')) {
+        if (! Schema::hasTable('votos_padron')) {
             Schema::create('votos_padron', function (Blueprint $table) {
                 $table->id();
                 $table->foreignId('comicio_id')->constrained('comicios_electorales')->onDelete('cascade');
@@ -90,7 +90,7 @@ return new class extends Migration
         }
 
         // 6. Quioscos Escolares y Cafeterías Saludables (Ley 30021 / D.S. 007-2026-MINEDU)
-        if (!Schema::hasTable('quioscos')) {
+        if (! Schema::hasTable('quioscos')) {
             Schema::create('quioscos', function (Blueprint $table) {
                 $table->id();
                 $table->foreignId('empresa_id')->default(1)->constrained('empresas')->onDelete('cascade');
@@ -102,7 +102,7 @@ return new class extends Migration
         }
 
         // 7. Concesiones y Licitaciones de Quioscos
-        if (!Schema::hasTable('concesiones_quioscos')) {
+        if (! Schema::hasTable('concesiones_quioscos')) {
             Schema::create('concesiones_quioscos', function (Blueprint $table) {
                 $table->id();
                 $table->foreignId('quiosco_id')->constrained('quioscos')->onDelete('cascade');
@@ -122,7 +122,7 @@ return new class extends Migration
         }
 
         // 8. Pagos de Arrendamiento de Quioscos (Ingresos APAFA)
-        if (!Schema::hasTable('pagos_quioscos')) {
+        if (! Schema::hasTable('pagos_quioscos')) {
             Schema::create('pagos_quioscos', function (Blueprint $table) {
                 $table->id();
                 $table->foreignId('concesion_id')->constrained('concesiones_quioscos')->onDelete('cascade');
@@ -138,7 +138,7 @@ return new class extends Migration
         }
 
         // 9. Dictámenes y Auditorías del Consejo de Vigilancia
-        if (!Schema::hasTable('dictamenes_vigilancia')) {
+        if (! Schema::hasTable('dictamenes_vigilancia')) {
             Schema::create('dictamenes_vigilancia', function (Blueprint $table) {
                 $table->id();
                 $table->foreignId('empresa_id')->default(1)->constrained('empresas')->onDelete('cascade');
@@ -156,7 +156,7 @@ return new class extends Migration
         }
 
         // 10. Continuidad de Gestión, Vacancias y Reemplazos de Directivos
-        if (!Schema::hasTable('movimientos_directiva')) {
+        if (! Schema::hasTable('movimientos_directiva')) {
             Schema::create('movimientos_directiva', function (Blueprint $table) {
                 $table->id();
                 $table->foreignId('empresa_id')->default(1)->constrained('empresas')->onDelete('cascade');
@@ -168,7 +168,7 @@ return new class extends Migration
                     'RENUNCIA_VOLUNTARIA',
                     'EGRESO_DEL_HIJO',
                     'FALLECIMIENTO_O_INCAPACIDAD',
-                    'DESTITUCION_POR_ASAMBLEA'
+                    'DESTITUCION_POR_ASAMBLEA',
                 ])->default('RENUNCIA_VOLUNTARIA');
                 $table->date('fecha_vacancia');
                 $table->string('directivo_entrante_nombre');

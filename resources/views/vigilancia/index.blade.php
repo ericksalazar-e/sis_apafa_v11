@@ -35,7 +35,12 @@
             <div>
                 <p class="text-xs text-slate-500 font-medium uppercase tracking-wider">Ingresos Auditados</p>
                 <h3 class="text-2xl font-extrabold text-slate-800">S/ {{ number_format($totalIngresos, 2) }}</h3>
-                <p class="text-[11px] text-slate-400 mt-0.5">Cuotas (S/ {{ number_format($totalIngresosCuotas, 2) }}) + Quioscos</p>
+                <p class="text-[11px] text-slate-400 mt-0.5">
+                    @if(($saldoInicialCaja ?? 0) > 0)
+                        Saldo Inicial: S/ {{ number_format($saldoInicialCaja, 2) }} &bull;
+                    @endif
+                    Cuotas (S/ {{ number_format($totalIngresosCuotas, 2) }}) + Quioscos
+                </p>
             </div>
         </div>
 

@@ -34,6 +34,14 @@
                 <span>Carga Masiva Excel / CSV</span>
             </button>
 
+            <!-- Botón Promoción / Nuevo Año Escolar -->
+            <button type="button" onclick="document.getElementById('modal-promocion-anio-estudiantes').classList.remove('hidden')"
+                    class="flex-1 sm:flex-initial px-3.5 py-2.5 bg-amber-50 hover:bg-amber-100 text-amber-800 border border-amber-300 rounded-xl text-xs font-bold flex items-center justify-center gap-1.5 transition-all shadow-sm active:scale-95"
+                    title="Apertura de Nuevo Año Escolar, Promoción Masiva de Grados y Generación de Cuota APAFA">
+                <i class="fa-solid fa-calendar-plus text-amber-600 text-sm"></i>
+                <span>Promoción de Año</span>
+            </button>
+
             <!-- Botón Modal Nuevo Estudiante -->
             <button onclick="document.getElementById('modal-nuevo-estudiante').classList.remove('hidden')" 
                     class="w-full sm:w-auto px-4 py-2.5 bg-indigo-600 hover:bg-indigo-700 active:scale-95 text-white rounded-xl text-xs font-bold flex items-center justify-center gap-2 shadow-sm transition-all">
@@ -323,6 +331,11 @@
                                 <span class="px-2 py-0.5 rounded-full text-[10px] font-bold border {{ $badgeNivelClass }}">
                                     {{ $est->nivel }}
                                 </span>
+                                @if(!empty($est->estado_matricula) && $est->estado_matricula !== 'MATRICULADO')
+                                    <span class="px-2 py-0.5 rounded-full text-[10px] font-bold border {{ $est->estado_matricula === 'EGRESADO' ? 'bg-slate-100 text-slate-700 border-slate-300' : 'bg-emerald-50 text-emerald-700 border-emerald-200' }}">
+                                        {{ $est->estado_matricula }}
+                                    </span>
+                                @endif
                                 <span class="text-[10px] text-slate-400 font-medium">
                                     Turno {{ $est->turno }}
                                 </span>
@@ -670,8 +683,14 @@
             <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
                 <div>
                     <label class="block font-semibold text-slate-700 mb-1">DNI del Alumno *</label>
-                    <input type="text" name="dni" maxlength="8" pattern="[0-9]{8}" required placeholder="8 dígitos" 
-                           class="w-full px-3 py-2 border border-slate-200 rounded-xl focus:ring-2 focus:ring-indigo-500 font-mono">
+                    <div class="relative">
+                        <input type="text" name="dni" id="nuevo_estudiante_dni" maxlength="8" pattern="[0-9]{8}" required placeholder="8 dígitos" 
+                               class="w-full px-3 py-2 border border-slate-200 rounded-xl focus:ring-2 focus:ring-indigo-500 font-mono transition-colors">
+                        <span id="nuevo_estudiante_dni_spinner" class="hidden absolute right-3 top-2.5 text-slate-400 text-xs">
+                            <i class="fa-solid fa-circle-notch fa-spin"></i>
+                        </span>
+                    </div>
+                    <div id="nuevo_estudiante_dni_feedback" class="mt-1 text-[11px] leading-tight hidden font-medium"></div>
                 </div>
                 <div class="sm:col-span-2">
                     <label class="block font-semibold text-slate-700 mb-1">Nombres del Alumno *</label>
@@ -704,8 +723,11 @@
                     </select>
                 </div>
                 <div>
-                    <label class="block font-semibold text-slate-700 mb-1">Turno *</label>
-                    <select name="turno" class="w-full px-3 py-2 border border-slate-200 rounded-xl focus:ring-2 focus:ring-indigo-500 bg-white">
+                    <label class="block font-semibold text-slate-700 mb-1 flex items-center justify-between">
+                        <span>Turno *</span>
+                        <span id="turno-sugerido-badge" class="text-[10px] text-indigo-600 font-normal hidden">Sugerido por aula</span>
+                    </label>
+                    <select name="turno" id="modal-select-turno" class="w-full px-3 py-2 border border-slate-200 rounded-xl focus:ring-2 focus:ring-indigo-500 bg-white font-medium">
                         <option value="Mañana" selected>Mañana</option>
                         <option value="Tarde">Tarde</option>
                         <option value="Noche">Noche</option>
@@ -717,7 +739,7 @@
             <div class="grid grid-cols-2 gap-3">
                 <div>
                     <label class="block font-semibold text-slate-700 mb-1">Grado *</label>
-                    <select name="grado" id="modal-select-grado" required class="w-full px-3 py-2 border border-slate-200 rounded-xl focus:ring-2 focus:ring-indigo-500 bg-white">
+                    <select name="grado" id="modal-select-grado" onchange="sugerirTurnoModalNuevo()" required class="w-full px-3 py-2 border border-slate-200 rounded-xl focus:ring-2 focus:ring-indigo-500 bg-white">
                         <option value="1ro">1ro</option>
                         <option value="2do">2do</option>
                         <option value="3ro" selected>3ro</option>
@@ -728,7 +750,7 @@
                 </div>
                 <div>
                     <label class="block font-semibold text-slate-700 mb-1">Sección *</label>
-                    <select name="seccion" required class="w-full px-3 py-2 border border-slate-200 rounded-xl focus:ring-2 focus:ring-indigo-500 bg-white">
+                    <select name="seccion" id="modal-select-seccion" onchange="sugerirTurnoModalNuevo()" required class="w-full px-3 py-2 border border-slate-200 rounded-xl focus:ring-2 focus:ring-indigo-500 bg-white">
                         <option value="A" selected>Sección A</option>
                         <option value="B">Sección B</option>
                         <option value="C">Sección C</option>
@@ -748,7 +770,7 @@
                 <button type="button" onclick="document.getElementById('modal-nuevo-estudiante').classList.add('hidden')" class="px-4 py-2 text-slate-600 hover:bg-slate-100 rounded-xl font-semibold">
                     Cancelar
                 </button>
-                <button type="submit" class="px-5 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl font-bold shadow-md shadow-indigo-600/30">
+                <button type="submit" id="btn-guardar-nuevo-estudiante" class="px-5 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl font-bold shadow-md shadow-indigo-600/30 transition-all">
                     Guardar y Emitir Tarjeta
                 </button>
             </div>
@@ -779,9 +801,15 @@
             <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
                 <div>
                     <label class="block font-semibold text-slate-700 mb-1">DNI del Alumno *</label>
-                    <input type="text" name="dni" id="editar_dni" maxlength="8" pattern="[0-9]{8}" required 
-                           placeholder="8 dígitos" 
-                           class="w-full px-3 py-2 border border-slate-200 rounded-xl focus:ring-2 focus:ring-indigo-500 font-mono font-bold bg-amber-50/50">
+                    <div class="relative">
+                        <input type="text" name="dni" id="editar_dni" maxlength="8" pattern="[0-9]{8}" required 
+                               placeholder="8 dígitos" 
+                               class="w-full px-3 py-2 border border-slate-200 rounded-xl focus:ring-2 focus:ring-indigo-500 font-mono font-bold bg-amber-50/50 transition-colors">
+                        <span id="editar_estudiante_dni_spinner" class="hidden absolute right-3 top-2.5 text-slate-400 text-xs">
+                            <i class="fa-solid fa-circle-notch fa-spin"></i>
+                        </span>
+                    </div>
+                    <div id="editar_estudiante_dni_feedback" class="mt-1 text-[11px] leading-tight hidden font-medium"></div>
                     <span class="text-[10px] text-amber-700 font-semibold mt-0.5 block">Corregir si hubo error</span>
                 </div>
                 <div class="sm:col-span-2">
@@ -835,7 +863,7 @@
             <div class="grid grid-cols-2 gap-3">
                 <div>
                     <label class="block font-semibold text-slate-700 mb-1">Grado *</label>
-                    <select name="grado" id="editar_grado" required 
+                    <select name="grado" id="editar_grado" onchange="sugerirTurnoModalEditar()" required 
                             class="w-full px-3 py-2 border border-slate-200 rounded-xl focus:ring-2 focus:ring-indigo-500 bg-white font-medium">
                         <option value="1ro">1ro</option>
                         <option value="2do">2do</option>
@@ -847,7 +875,7 @@
                 </div>
                 <div>
                     <label class="block font-semibold text-slate-700 mb-1">Sección *</label>
-                    <select name="seccion" id="editar_seccion" required 
+                    <select name="seccion" id="editar_seccion" onchange="sugerirTurnoModalEditar()" required 
                             class="w-full px-3 py-2 border border-slate-200 rounded-xl focus:ring-2 focus:ring-indigo-500 bg-white font-medium">
                         <option value="A">Sección A</option>
                         <option value="B">Sección B</option>
@@ -893,7 +921,7 @@
                 <button type="button" onclick="document.getElementById('modal-editar-estudiante').classList.add('hidden')" class="px-4 py-2 text-slate-600 hover:bg-slate-100 rounded-xl font-semibold">
                     Cancelar
                 </button>
-                <button type="submit" class="px-5 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl font-bold shadow-md shadow-indigo-600/30 flex items-center gap-1.5">
+                <button type="submit" id="btn-guardar-editar-estudiante" class="px-5 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl font-bold shadow-md shadow-indigo-600/30 flex items-center gap-1.5 transition-all">
                     <i class="fa-solid fa-floppy-disk"></i>
                     Guardar Cambios
                 </button>
@@ -903,6 +931,47 @@
 </div>
 
 <script>
+    const matrizTurnos = @json($matrizTurnos ?? []);
+
+    function sugerirTurnoModalNuevo() {
+        const nivel = document.getElementById('modal-select-nivel')?.value || '';
+        const grado = document.getElementById('modal-select-grado')?.value || '';
+        const seccion = document.getElementById('modal-select-seccion')?.value || '';
+        const clave = `${nivel}|${grado}|${seccion}`.toUpperCase();
+
+        const badge = document.getElementById('turno-sugerido-badge');
+        const selectTurno = document.getElementById('modal-select-turno');
+        if (!selectTurno) return;
+
+        if (matrizTurnos && matrizTurnos[clave]) {
+            selectTurno.value = matrizTurnos[clave];
+            if (badge) {
+                badge.textContent = `⚡ Predeterminado: ${matrizTurnos[clave]}`;
+                badge.classList.remove('hidden');
+            }
+        } else {
+            if (badge) badge.classList.add('hidden');
+        }
+    }
+
+    function sugerirTurnoModalEditar() {
+        const nivel = document.getElementById('editar_nivel')?.value || '';
+        const grado = document.getElementById('editar_grado')?.value || '';
+        const seccion = document.getElementById('editar_seccion')?.value || '';
+        const clave = `${nivel}|${grado}|${seccion}`.toUpperCase();
+
+        const selectTurno = document.getElementById('editar_turno');
+        if (!selectTurno) return;
+
+        if (matrizTurnos && matrizTurnos[clave]) {
+            selectTurno.value = matrizTurnos[clave];
+        }
+    }
+
+    document.addEventListener('DOMContentLoaded', () => {
+        sugerirTurnoModalNuevo();
+    });
+
     function actualizarGradosModal() {
         const nivel = document.getElementById('modal-select-nivel').value;
         const gradoSelect = document.getElementById('modal-select-grado');
@@ -924,11 +993,26 @@
             if (idx === 0) opt.selected = true;
             gradoSelect.appendChild(opt);
         });
+
+        sugerirTurnoModalNuevo();
     }
 
     function abrirModalEditarEstudiante(est) {
+        idEstudianteEnEdicion = est.id;
         const form = document.getElementById('form-editar-estudiante');
         form.action = `/estudiantes/${est.id}`;
+
+        if (feedbackDniEditarEst) {
+            feedbackDniEditarEst.classList.add('hidden');
+            feedbackDniEditarEst.textContent = '';
+        }
+        if (inputDniEditarEst) {
+            inputDniEditarEst.classList.remove('border-rose-500', 'bg-rose-50/40', 'border-emerald-500', 'bg-emerald-50/20');
+        }
+        if (btnSubmitEditarEst) {
+            btnSubmitEditarEst.disabled = false;
+            btnSubmitEditarEst.classList.remove('opacity-50', 'cursor-not-allowed');
+        }
 
         document.getElementById('editar_dni').value = est.dni || '';
         document.getElementById('editar_nombres').value = est.nombres || '';
@@ -1049,5 +1133,198 @@
             }
         });
     }
+
+    // -------------------------------------------------------------
+    // VALIDACIÓN EN TIEMPO REAL DE DNI DUPLICADO (ESTUDIANTES)
+    // -------------------------------------------------------------
+    let idEstudianteEnEdicion = null;
+    let timerDniEstNuevo = null;
+    let timerDniEstEditar = null;
+
+    const inputDniNuevoEst = document.getElementById('nuevo_estudiante_dni');
+    const feedbackDniNuevoEst = document.getElementById('nuevo_estudiante_dni_feedback');
+    const spinnerDniNuevoEst = document.getElementById('nuevo_estudiante_dni_spinner');
+    const btnSubmitNuevoEst = document.getElementById('btn-guardar-nuevo-estudiante');
+
+    if (inputDniNuevoEst) {
+        inputDniNuevoEst.addEventListener('input', function() {
+            clearTimeout(timerDniEstNuevo);
+            this.value = this.value.replace(/\D/g, '');
+            const dni = this.value;
+
+            if (dni.length < 8) {
+                feedbackDniNuevoEst.classList.add('hidden');
+                feedbackDniNuevoEst.textContent = '';
+                inputDniNuevoEst.classList.remove('border-rose-500', 'bg-rose-50/40', 'border-emerald-500', 'bg-emerald-50/20');
+                btnSubmitNuevoEst.disabled = false;
+                btnSubmitNuevoEst.classList.remove('opacity-50', 'cursor-not-allowed');
+                return;
+            }
+
+            if (dni.length === 8) {
+                spinnerDniNuevoEst.classList.remove('hidden');
+                timerDniEstNuevo = setTimeout(() => {
+                    fetch(`{{ route('estudiantes.verificar_dni') }}?dni=${encodeURIComponent(dni)}`)
+                        .then(r => r.json())
+                        .then(data => {
+                            spinnerDniNuevoEst.classList.add('hidden');
+                            feedbackDniNuevoEst.classList.remove('hidden');
+                            if (data.existe) {
+                                inputDniNuevoEst.classList.remove('border-emerald-500', 'bg-emerald-50/20');
+                                inputDniNuevoEst.classList.add('border-rose-500', 'bg-rose-50/40');
+                                feedbackDniNuevoEst.className = 'mt-1 text-[11px] leading-tight font-bold text-rose-700 bg-rose-50 border border-rose-200 rounded-xl p-2.5';
+                                feedbackDniNuevoEst.innerHTML = `<i class="fa-solid fa-triangle-exclamation mr-1 text-rose-600"></i> ${data.mensaje}`;
+                                btnSubmitNuevoEst.disabled = true;
+                                btnSubmitNuevoEst.classList.add('opacity-50', 'cursor-not-allowed');
+                            } else {
+                                inputDniNuevoEst.classList.remove('border-rose-500', 'bg-rose-50/40');
+                                inputDniNuevoEst.classList.add('border-emerald-500', 'bg-emerald-50/20');
+                                feedbackDniNuevoEst.className = 'mt-1 text-[11px] leading-tight font-semibold text-emerald-600';
+                                feedbackDniNuevoEst.innerHTML = `<i class="fa-solid fa-circle-check mr-1"></i> DNI disponible para matrícula`;
+                                btnSubmitNuevoEst.disabled = false;
+                                btnSubmitNuevoEst.classList.remove('opacity-50', 'cursor-not-allowed');
+                            }
+                        })
+                        .catch(() => {
+                            spinnerDniNuevoEst.classList.add('hidden');
+                        });
+                }, 250);
+            }
+        });
+    }
+
+    const inputDniEditarEst = document.getElementById('editar_dni');
+    const feedbackDniEditarEst = document.getElementById('editar_estudiante_dni_feedback');
+    const spinnerDniEditarEst = document.getElementById('editar_estudiante_dni_spinner');
+    const btnSubmitEditarEst = document.getElementById('btn-guardar-editar-estudiante');
+
+    if (inputDniEditarEst) {
+        inputDniEditarEst.addEventListener('input', function() {
+            clearTimeout(timerDniEstEditar);
+            this.value = this.value.replace(/\D/g, '');
+            const dni = this.value;
+
+            if (dni.length < 8) {
+                feedbackDniEditarEst.classList.add('hidden');
+                feedbackDniEditarEst.textContent = '';
+                inputDniEditarEst.classList.remove('border-rose-500', 'bg-rose-50/40', 'border-emerald-500', 'bg-emerald-50/20');
+                btnSubmitEditarEst.disabled = false;
+                btnSubmitEditarEst.classList.remove('opacity-50', 'cursor-not-allowed');
+                return;
+            }
+
+            if (dni.length === 8) {
+                spinnerDniEditarEst.classList.remove('hidden');
+                timerDniEstEditar = setTimeout(() => {
+                    const ignoreParam = idEstudianteEnEdicion ? `&ignore_id=${idEstudianteEnEdicion}` : '';
+                    fetch(`{{ route('estudiantes.verificar_dni') }}?dni=${encodeURIComponent(dni)}${ignoreParam}`)
+                        .then(r => r.json())
+                        .then(data => {
+                            spinnerDniEditarEst.classList.add('hidden');
+                            feedbackDniEditarEst.classList.remove('hidden');
+                            if (data.existe) {
+                                inputDniEditarEst.classList.remove('border-emerald-500', 'bg-emerald-50/20');
+                                inputDniEditarEst.classList.add('border-rose-500', 'bg-rose-50/40');
+                                feedbackDniEditarEst.className = 'mt-1 text-[11px] leading-tight font-bold text-rose-700 bg-rose-50 border border-rose-200 rounded-xl p-2.5';
+                                feedbackDniEditarEst.innerHTML = `<i class="fa-solid fa-triangle-exclamation mr-1 text-rose-600"></i> ${data.mensaje}`;
+                                btnSubmitEditarEst.disabled = true;
+                                btnSubmitEditarEst.classList.add('opacity-50', 'cursor-not-allowed');
+                            } else {
+                                inputDniEditarEst.classList.remove('border-rose-500', 'bg-rose-50/40');
+                                inputDniEditarEst.classList.add('border-emerald-500', 'bg-emerald-50/20');
+                                feedbackDniEditarEst.className = 'mt-1 text-[11px] leading-tight font-semibold text-emerald-600';
+                                feedbackDniEditarEst.innerHTML = `<i class="fa-solid fa-circle-check mr-1"></i> DNI disponible y válido`;
+                                btnSubmitEditarEst.disabled = false;
+                                btnSubmitEditarEst.classList.remove('opacity-50', 'cursor-not-allowed');
+                            }
+                        })
+                        .catch(() => {
+                            spinnerDniEditarEst.classList.add('hidden');
+                        });
+                }, 250);
+            }
+        });
+    }
 </script>
+
+<!-- MODAL: Promoción Masiva y Apertura de Nuevo Año Lectivo -->
+<div id="modal-promocion-anio-estudiantes" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center hidden p-4">
+    <div class="bg-white rounded-3xl max-w-xl w-full p-6 shadow-2xl border border-slate-100 max-h-[92vh] overflow-y-auto space-y-4">
+        <div class="flex items-center justify-between pb-3 border-b border-slate-100">
+            <div>
+                <h3 class="text-base font-black text-slate-800 flex items-center gap-2">
+                    <i class="fa-solid fa-calendar-check text-amber-600"></i> Apertura de Año y Promoción Escolar
+                </h3>
+                <p class="text-xs text-slate-400 mt-0.5">Transición de Año Lectivo, Promoción de Grados y Nueva Cuota APAFA</p>
+            </div>
+            <button onclick="document.getElementById('modal-promocion-anio-estudiantes').classList.add('hidden')" class="text-slate-400 hover:text-slate-600">
+                <i class="fa-solid fa-xmark text-lg"></i>
+            </button>
+        </div>
+
+        <form action="{{ route('estudiantes.promocion_masiva') }}" method="POST" class="space-y-4 text-xs"
+              onsubmit="return confirmAction(event, this, '¿Ejecutar Apertura de Año y Promoción Masiva?', 'Se promoverán los grados escolares de los estudiantes, se egresará al 5to de secundaria y se generará la cuota APAFA del nuevo año lectivo.');">
+            @csrf
+
+            <div class="p-3.5 bg-amber-50 rounded-2xl border border-amber-200 text-amber-900 text-xs space-y-1.5">
+                <div class="font-bold flex items-center gap-1.5 text-amber-800">
+                    <i class="fa-solid fa-circle-info text-amber-600"></i>
+                    <span>¿Cómo funciona el cierre de año y apertura de nueva matrícula?</span>
+                </div>
+                <p class="text-[11px] leading-relaxed text-slate-700">
+                    <strong>1. Promoción automática de grados:</strong> Los alumnos de 1° a 5° de primaria y 1° a 4° de secundaria avanzan al grado inmediato superior conservando su sección. Los alumnos de 5° de Secundaria pasan automáticamente a estado <strong>"EGRESADO"</strong>.<br>
+                    <strong>2. Apertura del nuevo año:</strong> La institución actualiza su año escolar oficial. Podrá matricular nuevos ingresantes (1° grado, Inicial o traslados).<br>
+                    <strong>3. Generación de Cuota APAFA:</strong> Se abre la nueva cuota anual oficial para todos los padres asociados registrados.
+                </p>
+            </div>
+
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div>
+                    <label class="block font-semibold text-slate-700 mb-1">Año Lectivo a Aperturar *</label>
+                    <input type="number" name="nuevo_anio" required min="{{ $empresa->anio_lectivo_actual ?? date('Y') }}" max="{{ ($empresa->anio_lectivo_actual ?? date('Y')) + 2 }}"
+                           value="{{ ($empresa->anio_lectivo_actual ?? date('Y')) + 1 }}"
+                           class="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-mono font-bold focus:ring-2 focus:ring-amber-500 focus:bg-white focus:outline-none">
+                    <p class="text-[10px] text-slate-400 mt-1">Año actual en curso: {{ $empresa->anio_lectivo_actual ?? date('Y') }}</p>
+                </div>
+
+                <div>
+                    <label class="block font-semibold text-slate-700 mb-1">Cuota Anual APAFA (S/) *</label>
+                    <input type="number" step="0.50" min="0" max="82.50" name="monto_cuota" required value="50.00"
+                           class="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-mono font-bold focus:ring-2 focus:ring-amber-500 focus:bg-white focus:outline-none">
+                    <p class="text-[10px] text-slate-400 mt-1">Límite legal: Máx. 1.5% UIT (S/ 82.50)</p>
+                </div>
+            </div>
+
+            <div>
+                <label class="block font-semibold text-slate-700 mb-1">Periodo de Gestión APAFA (Opcional)</label>
+                <input type="text" name="periodo_apafa" value="{{ $empresa->periodo_apafa ?? (date('Y') . ' - ' . (date('Y')+1)) }}"
+                       placeholder="Ej. {{ date('Y') }} - {{ date('Y')+1 }}"
+                       class="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold focus:ring-2 focus:ring-amber-500 focus:bg-white focus:outline-none">
+            </div>
+
+            <div class="space-y-2.5 pt-2 border-t border-slate-100">
+                <label class="flex items-center gap-2.5 cursor-pointer">
+                    <input type="checkbox" name="promover_grados" value="1" checked class="w-4 h-4 rounded text-amber-600 focus:ring-amber-500 border-slate-300">
+                    <span class="text-xs font-semibold text-slate-700">Promover automáticamente a los estudiantes al grado siguiente y egresar 5to secundaria</span>
+                </label>
+
+                <label class="flex items-center gap-2.5 cursor-pointer">
+                    <input type="checkbox" name="generar_cuotas" value="1" checked class="w-4 h-4 rounded text-amber-600 focus:ring-amber-500 border-slate-300">
+                    <span class="text-xs font-semibold text-slate-700">Generar cuota anual APAFA para todos los padres de familia asociados</span>
+                </label>
+            </div>
+
+            <div class="pt-4 border-t border-slate-100 flex items-center justify-end gap-3">
+                <button type="button" onclick="document.getElementById('modal-promocion-anio-estudiantes').classList.add('hidden')"
+                        class="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold rounded-xl text-xs transition-colors">
+                    Cancelar
+                </button>
+                <button type="submit"
+                        class="px-5 py-2.5 bg-amber-600 hover:bg-amber-700 active:scale-95 text-white font-bold rounded-xl text-xs transition-all shadow-md flex items-center gap-2">
+                    <i class="fa-solid fa-rocket"></i> Ejecutar Apertura de Año
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
 @endsection

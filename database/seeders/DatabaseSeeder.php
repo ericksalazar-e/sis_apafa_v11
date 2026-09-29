@@ -16,7 +16,6 @@ use App\Models\TipoConsanguinidad;
 use App\Models\User;
 use Faker\Factory as Faker;
 use Illuminate\Database\Seeder;
-use Illuminate\Support\Facades\Hash;
 
 class DatabaseSeeder extends Seeder
 {
@@ -57,7 +56,7 @@ class DatabaseSeeder extends Seeder
 
         $consanguinidades = [
             'PADRE', 'MADRE', 'TÍO', 'TÍA', 'HERMANO', 'HERMANA',
-            'ABUELO', 'ABUELA', 'TUTOR LEGAL', 'OTRO'
+            'ABUELO', 'ABUELA', 'TUTOR LEGAL', 'OTRO',
         ];
         foreach ($consanguinidades as $tc) {
             TipoConsanguinidad::create(['nombre' => $tc]);
@@ -69,24 +68,82 @@ class DatabaseSeeder extends Seeder
         }
 
         // 3. Usuarios de Prueba
-        $user1 = User::create([
+        $admin = User::firstOrCreate(['email' => 'admin@apafa.pe'], [
+            'empresa_id' => $empresa1->id,
+            'name' => 'Administrador General APAFA',
+            'username' => 'admin',
+            'email' => 'admin@apafa.pe',
+            'rol' => 'ADMIN',
+            'cargo_titulo' => 'ADMINISTRADOR DEL SISTEMA',
+            'password' => 'admin123',
+            'estado' => 1,
+            'codigo' => 'ADM001',
+        ]);
+
+        $user1 = User::firstOrCreate(['email' => 'isai.ismael1999@gmail.com'], [
             'empresa_id' => $empresa1->id,
             'name' => 'Isai Ismael Sandoval Ccaccro',
             'username' => 'isai',
             'email' => 'isai.ismael1999@gmail.com',
-            'password' => Hash::make('admin123'),
+            'rol' => 'ADMIN',
+            'password' => 'admin123',
             'estado' => 1,
             'codigo' => '013645',
         ]);
 
-        $user2 = User::create([
+        $user2 = User::firstOrCreate(['email' => 'admin2@colegio.edu.pe'], [
             'empresa_id' => $empresa2->id,
             'name' => 'Administrador Sede Huamanga',
             'username' => 'admin2',
             'email' => 'admin2@colegio.edu.pe',
-            'password' => Hash::make('admin123'),
+            'rol' => 'SECRETARIO',
+            'password' => 'admin123',
             'estado' => 1,
             'codigo' => '024890',
+        ]);
+
+        $userSecretario = User::firstOrCreate(['email' => 'secretario@apafa.edu.pe'], [
+            'empresa_id' => $empresa1->id,
+            'name' => 'Secretario de Actas',
+            'username' => 'secretario',
+            'email' => 'secretario@apafa.edu.pe',
+            'rol' => 'SECRETARIO',
+            'password' => 'secretario123',
+            'estado' => 1,
+            'codigo' => 'SEC001',
+        ]);
+
+        $userVocal = User::firstOrCreate(['email' => 'vocal@apafa.edu.pe'], [
+            'empresa_id' => $empresa1->id,
+            'name' => 'Vocal de Asistencia y Puerta',
+            'username' => 'vocal',
+            'email' => 'vocal@apafa.edu.pe',
+            'rol' => 'VOCAL_OPERADOR',
+            'password' => 'vocal123',
+            'estado' => 1,
+            'codigo' => 'VOC001',
+        ]);
+
+        $userVigilancia = User::firstOrCreate(['email' => 'vigilancia@apafa.edu.pe'], [
+            'empresa_id' => $empresa1->id,
+            'name' => 'Comité de Vigilancia',
+            'username' => 'vigilancia',
+            'email' => 'vigilancia@apafa.edu.pe',
+            'rol' => 'COMITE_VIGILANCIA',
+            'password' => 'vigilancia123',
+            'estado' => 1,
+            'codigo' => 'VIG001',
+        ]);
+
+        $userTesorero = User::firstOrCreate(['email' => 'tesorero@apafa.edu.pe'], [
+            'empresa_id' => $empresa1->id,
+            'name' => 'Tesorero Oficial',
+            'username' => 'tesorero',
+            'email' => 'tesorero@apafa.edu.pe',
+            'rol' => 'TESORERO',
+            'password' => 'tesorero123',
+            'estado' => 1,
+            'codigo' => 'TES001',
         ]);
 
         // 4. Poblar datos por Empresa usando Faker
@@ -131,7 +188,7 @@ class DatabaseSeeder extends Seeder
                     'padre_nombres' => strtoupper($faker->firstName()),
                     'padre_ape_pat' => strtoupper($faker->lastName()),
                     'padre_ape_mat' => strtoupper($faker->lastName()),
-                    'celular' => '9' . $faker->numerify('########'),
+                    'celular' => '9'.$faker->numerify('########'),
                     'direccion' => $faker->address(),
                     'fecha_creacion' => now()->subDays(rand(10, 60)),
                 ]);
@@ -182,8 +239,8 @@ class DatabaseSeeder extends Seeder
                         'serie' => 'B001',
                         'numero' => sprintf('%06d', $i + 1),
                         'estado_facturacion' => 'EMITIDO',
-                        'hash_cpe' => 'q76gH+8j2k1Lz' . rand(100, 999),
-                        'mensaje_sunat' => 'La Boleta B001-' . sprintf('%06d', $i + 1) . ' ha sido aceptada.',
+                        'hash_cpe' => 'q76gH+8j2k1Lz'.rand(100, 999),
+                        'mensaje_sunat' => 'La Boleta B001-'.sprintf('%06d', $i + 1).' ha sido aceptada.',
                     ]);
                 }
             }

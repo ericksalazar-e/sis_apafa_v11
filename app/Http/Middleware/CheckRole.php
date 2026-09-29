@@ -11,11 +11,11 @@ class CheckRole
     /**
      * Handle an incoming request.
      *
-     * @param  \Closure(\Illuminate\Http\Request): (\Symfony\Component\HttpFoundation\Response)  $next
+     * @param  Closure(Request): (Response)  $next
      */
     public function handle(Request $request, Closure $next, ...$roles): Response
     {
-        if (!auth()->check()) {
+        if (! auth()->check()) {
             return redirect()->route('login')
                 ->withErrors(['login' => 'Debe iniciar sesión para acceder a este módulo institucional.'])
                 ->with('error', 'Sesión requerida: Inicie sesión para continuar en el sistema.');
@@ -41,7 +41,7 @@ class CheckRole
             'DIRECTOR' => 'Director de la I.E.',
             'COMITE_VIGILANCIA' => 'Consejo de Vigilancia',
         ];
-        $rolesPermitidos = array_map(fn($r) => $rolesNombres[$r] ?? $r, $roles);
+        $rolesPermitidos = array_map(fn ($r) => $rolesNombres[$r] ?? $r, $roles);
         $rolesStr = implode(', ', $rolesPermitidos);
 
         return abort(403, "Su rol actual ({$user->rol_nombre}) no cuenta con autorización para acceder a este módulo. Módulos asignados a: {$rolesStr}.");

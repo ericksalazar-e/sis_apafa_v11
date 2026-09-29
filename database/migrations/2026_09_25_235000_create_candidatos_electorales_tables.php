@@ -12,7 +12,7 @@ return new class extends Migration
      */
     public function up(): void
     {
-        if (!Schema::hasTable('listas_electorales')) {
+        if (! Schema::hasTable('listas_electorales')) {
             Schema::create('listas_electorales', function (Blueprint $table) {
                 $table->id();
                 $table->foreignId('comicio_id')->constrained('comicios_electorales')->onDelete('cascade');
@@ -29,7 +29,7 @@ return new class extends Migration
             });
         }
 
-        if (!Schema::hasTable('candidatos_electorales')) {
+        if (! Schema::hasTable('candidatos_electorales')) {
             Schema::create('candidatos_electorales', function (Blueprint $table) {
                 $table->id();
                 $table->foreignId('lista_electoral_id')->constrained('listas_electorales')->onDelete('cascade');
@@ -42,10 +42,10 @@ return new class extends Migration
         }
 
         Schema::table('votos_padron', function (Blueprint $table) {
-            if (!Schema::hasColumn('votos_padron', 'lista_electoral_id')) {
+            if (! Schema::hasColumn('votos_padron', 'lista_electoral_id')) {
                 $table->unsignedBigInteger('lista_electoral_id')->nullable()->after('ha_votado');
             }
-            if (!Schema::hasColumn('votos_padron', 'tipo_voto')) {
+            if (! Schema::hasColumn('votos_padron', 'tipo_voto')) {
                 $table->string('tipo_voto', 20)->default('VALIDO')->after('lista_electoral_id'); // VALIDO, BLANCO, NULO
             }
         });

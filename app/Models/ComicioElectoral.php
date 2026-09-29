@@ -9,7 +9,7 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class ComicioElectoral extends Model
 {
-    use HasFactory, BelongsToTenant;
+    use BelongsToTenant, HasFactory;
 
     protected $table = 'comicios_electorales';
 
@@ -27,7 +27,6 @@ class ComicioElectoral extends Model
         'comite_vocal_nombre',
         'comite_vocal_dni',
     ];
-
 
     protected function casts(): array
     {
@@ -54,6 +53,7 @@ class ComicioElectoral extends Model
     {
         $añoInicio = (int) ($this->año_electoral ?? date('Y')) + 1;
         $añoFin = $añoInicio + 1;
+
         return "Bienio {$añoInicio} - {$añoFin}";
     }
 
@@ -64,6 +64,7 @@ class ComicioElectoral extends Model
     {
         $añoFin = (int) ($this->año_electoral ?? date('Y'));
         $añoInicio = $añoFin - 1;
+
         return "Bienio {$añoInicio} - {$añoFin}";
     }
 
@@ -73,12 +74,13 @@ class ComicioElectoral extends Model
      */
     public function getEsVentanaLegalValidaAttribute(): bool
     {
-        if (!$this->fecha_elecciones) {
+        if (! $this->fecha_elecciones) {
             return false;
         }
 
         $mes = (int) $this->fecha_elecciones->format('m');
-        return ($mes >= 9 && $mes <= 11);
+
+        return $mes >= 9 && $mes <= 11;
     }
 
     /**
@@ -86,7 +88,7 @@ class ComicioElectoral extends Model
      */
     public function getVentanaLegalDescripcionAttribute(): string
     {
-        return "Periodo obligatorio de elecciones: 01 de setiembre al 30 de noviembre del último año de gestión (Ley N.° 28628 Art. 48 / D.S. N.° 007-2026-MINEDU).";
+        return 'Periodo obligatorio de elecciones: 01 de setiembre al 30 de noviembre del último año de gestión (Ley N.° 28628 Art. 48 / D.S. N.° 007-2026-MINEDU).';
     }
 
     /**
@@ -94,10 +96,13 @@ class ComicioElectoral extends Model
      */
     public static function validarFechaEnVentanaLegal($fecha): bool
     {
-        if (!$fecha) return false;
+        if (! $fecha) {
+            return false;
+        }
         $timestamp = is_numeric($fecha) ? $fecha : strtotime($fecha);
         $mes = (int) date('n', $timestamp);
-        return ($mes >= 9 && $mes <= 11);
+
+        return $mes >= 9 && $mes <= 11;
     }
 
     /**
@@ -105,7 +110,7 @@ class ComicioElectoral extends Model
      */
     public function getListaGanadoraAttribute()
     {
-        if (!$this->relationLoaded('listas')) {
+        if (! $this->relationLoaded('listas')) {
             $this->load(['listas.candidatos.padreFamilia.estudiantes']);
         }
 
@@ -114,5 +119,3 @@ class ComicioElectoral extends Model
             ?? $this->listas->first();
     }
 }
-
-

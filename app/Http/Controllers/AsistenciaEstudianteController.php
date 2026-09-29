@@ -15,6 +15,8 @@ class AsistenciaEstudianteController extends Controller
         $fecha = $request->get('fecha', date('Y-m-d'));
         $filtroTurno = $request->get('turno');
         $filtroEstado = $request->get('estado');
+        $filtroActividad = $request->get('tipo_actividad', 'TODOS');
+        $filtroTallerId = $request->get('taller_id');
         $filtroNivel = trim($request->get('nivel', ''));
         $filtroGrado = trim($request->get('grado', ''));
         $filtroSeccion = trim($request->get('seccion', ''));
@@ -23,18 +25,35 @@ class AsistenciaEstudianteController extends Controller
         // Sincronizar y obtener horarios de turnos (Mañana, Tarde, Noche)
         $horarios = HorarioTurno::sincronizarYObtener($empresaId);
 
+        // Talleres activos de la institución
+        $talleresActivos = \App\Models\Taller::where('empresa_id', $empresaId)->where('activo', true)->get();
+
         // Estudiantes para el selector de Justificación de Inasistencia
         $estudiantesLista = Estudiante::orderBy('ape_pat')->orderBy('ape_mat')->get();
 
         // Consulta de Asistencias del día filtrado
-        $query = AsistenciaEstudiante::with(['estudiante.padreFamilia'])
+        $query = AsistenciaEstudiante::with(['estudiante.padreFamilia', 'taller'])
             ->where('fecha', $fecha);
 
-        if (!empty($filtroTurno)) {
+        if (! empty($filtroTurno)) {
             $query->where('turno', $filtroTurno);
         }
 
-        if (!empty($filtroEstado)) {
+        if (! empty($filtroActividad) && $filtroActividad !== 'TODOS') {
+            if ($filtroActividad === 'CLASE_REGULAR') {
+                $query->where(function ($q) {
+                    $q->where('tipo_actividad', 'CLASE_REGULAR')->orWhereNull('tipo_actividad');
+                });
+            } elseif ($filtroActividad === 'TALLER') {
+                $query->where('tipo_actividad', 'TALLER');
+            }
+        }
+
+        if (! empty($filtroTallerId)) {
+            $query->where('taller_id', $filtroTallerId);
+        }
+
+        if (! empty($filtroEstado)) {
             if ($filtroEstado === 'JUSTIFICADAS') {
                 $query->where('justificado', true);
             } else {
@@ -43,28 +62,28 @@ class AsistenciaEstudianteController extends Controller
         }
 
         // Filtro por Nivel del Estudiante
-        if (!empty($filtroNivel) && strtolower($filtroNivel) !== 'todos') {
+        if (! empty($filtroNivel) && strtolower($filtroNivel) !== 'todos') {
             $query->whereHas('estudiante', function ($q) use ($filtroNivel) {
                 $q->whereRaw('LOWER(nivel) = ?', [strtolower($filtroNivel)]);
             });
         }
 
         // Filtro por Grado del Estudiante
-        if (!empty($filtroGrado) && strtolower($filtroGrado) !== 'todos') {
+        if (! empty($filtroGrado) && strtolower($filtroGrado) !== 'todos') {
             $query->whereHas('estudiante', function ($q) use ($filtroGrado) {
                 $q->whereRaw('LOWER(grado) = ?', [strtolower($filtroGrado)]);
             });
         }
 
         // Filtro por Sección del Estudiante
-        if (!empty($filtroSeccion) && strtolower($filtroSeccion) !== 'todos') {
+        if (! empty($filtroSeccion) && strtolower($filtroSeccion) !== 'todos') {
             $query->whereHas('estudiante', function ($q) use ($filtroSeccion) {
                 $q->whereRaw('LOWER(seccion) = ?', [strtolower($filtroSeccion)]);
             });
         }
 
         // Filtro de Búsqueda por DNI o Nombre/Apellidos
-        if (!empty($search)) {
+        if (! empty($search)) {
             $query->whereHas('estudiante', function ($q) use ($search) {
                 $q->where(function ($sub) use ($search) {
                     $sub->where('dni', 'like', "%{$search}%")
@@ -79,16 +98,16 @@ class AsistenciaEstudianteController extends Controller
 
         // Conteo de Estudiantes Matriculados según los filtros de nivel, grado y sección seleccionados
         $estudiantesFiltroQuery = Estudiante::query();
-        if (!empty($filtroNivel) && strtolower($filtroNivel) !== 'todos') {
+        if (! empty($filtroNivel) && strtolower($filtroNivel) !== 'todos') {
             $estudiantesFiltroQuery->whereRaw('LOWER(nivel) = ?', [strtolower($filtroNivel)]);
         }
-        if (!empty($filtroGrado) && strtolower($filtroGrado) !== 'todos') {
+        if (! empty($filtroGrado) && strtolower($filtroGrado) !== 'todos') {
             $estudiantesFiltroQuery->whereRaw('LOWER(grado) = ?', [strtolower($filtroGrado)]);
         }
-        if (!empty($filtroSeccion) && strtolower($filtroSeccion) !== 'todos') {
+        if (! empty($filtroSeccion) && strtolower($filtroSeccion) !== 'todos') {
             $estudiantesFiltroQuery->whereRaw('LOWER(seccion) = ?', [strtolower($filtroSeccion)]);
         }
-        if (!empty($search)) {
+        if (! empty($search)) {
             $estudiantesFiltroQuery->where(function ($sub) use ($search) {
                 $sub->where('dni', 'like', "%{$search}%")
                     ->orWhere('nombres', 'like', "%{$search}%")
@@ -111,7 +130,7 @@ class AsistenciaEstudianteController extends Controller
             ->where('nivel', '!=', '')
             ->distinct()
             ->pluck('nivel')
-            ->map(fn($n) => ucfirst(strtolower(trim($n))))
+            ->map(fn ($n) => ucfirst(strtolower(trim($n))))
             ->toArray();
         $nivelesDisponibles = array_values(array_unique(array_merge($nivelesBase, $nivelesBD)));
 
@@ -121,7 +140,7 @@ class AsistenciaEstudianteController extends Controller
             ->where('grado', '!=', '')
             ->distinct()
             ->pluck('grado')
-            ->map(fn($g) => trim($g))
+            ->map(fn ($g) => trim($g))
             ->toArray();
         $gradosDisponibles = array_values(array_unique(array_merge($gradosBase, $gradosBD)));
 
@@ -130,7 +149,7 @@ class AsistenciaEstudianteController extends Controller
             ->where('seccion', '!=', '')
             ->distinct()
             ->pluck('seccion')
-            ->map(fn($s) => strtoupper(trim($s)))
+            ->map(fn ($s) => strtoupper(trim($s)))
             ->toArray();
         $seccionesDisponibles = array_values(array_unique(array_merge($seccionesBase, $seccionesBD)));
 
@@ -149,6 +168,9 @@ class AsistenciaEstudianteController extends Controller
             'estudiantesLista',
             'filtroTurno',
             'filtroEstado',
+            'filtroActividad',
+            'filtroTallerId',
+            'talleresActivos',
             'filtroNivel',
             'filtroGrado',
             'filtroSeccion',
@@ -174,6 +196,7 @@ class AsistenciaEstudianteController extends Controller
             if ($request->wantsJson() || $request->ajax()) {
                 return response()->json(['success' => false, 'message' => 'Debe escanear o ingresar el DNI del alumno.'], 422);
             }
+
             return back()->withErrors(['codigo' => 'Debe escanear o ingresar el DNI del alumno.']);
         }
 
@@ -190,51 +213,110 @@ class AsistenciaEstudianteController extends Controller
         }
 
         $estudiante = Estudiante::with('padreFamilia')->where('dni', $dni)->first();
-        if (!$estudiante) {
+        if (! $estudiante) {
             $msg = "No se encontró ningún estudiante con el DNI {$dni} en esta institución.";
             if ($request->wantsJson() || $request->ajax()) {
                 return response()->json(['success' => false, 'message' => $msg], 404);
             }
+
             return back()->withErrors(['codigo' => $msg]);
         }
 
         $empresaId = (int) (session('empresa_id') ?? 1);
         $hoy = date('Y-m-d');
         $horaActual = date('H:i:s');
-        $turno = !empty($estudiante->turno) ? $estudiante->turno : 'Mañana';
+        $actividadParam = trim($request->get('actividad', 'AUTOMATICO'));
 
-        // Obtener configuración de horario para el turno del estudiante
-        $configTurno = HorarioTurno::where('empresa_id', $empresaId)
-            ->where('turno', $turno)
-            ->first();
+        // Determinar si la asistencia es para un Taller Extracurricular o para la Clase Regular
+        $tallerObjetivo = null;
+        $tipoActividad = 'CLASE_REGULAR';
 
-        // Horas límites de tolerancia por turno
-        $limitePuntual = '08:00:00';
-        if ($configTurno && !empty($configTurno->hora_limite_puntual)) {
-            $limitePuntual = strlen($configTurno->hora_limite_puntual) === 5 ? $configTurno->hora_limite_puntual . ':00' : $configTurno->hora_limite_puntual;
-        } elseif ($turno === 'Tarde') {
-            $limitePuntual = '13:30:00';
-        } elseif ($turno === 'Noche') {
-            $limitePuntual = '19:00:00';
+        if (str_starts_with($actividadParam, 'TALLER_')) {
+            $tallerId = (int) substr($actividadParam, 7);
+            $tallerObjetivo = \App\Models\Taller::where('empresa_id', $empresaId)->where('id', $tallerId)->first();
+            if ($tallerObjetivo) {
+                $tipoActividad = 'TALLER';
+            }
+        } elseif ($actividadParam === 'CLASE_REGULAR') {
+            $tipoActividad = 'CLASE_REGULAR';
+        } else {
+            // AUTOMÁTICO: Detección inteligente por horario y contraturno
+            $talleresDelAlumno = $estudiante->talleres();
+            $tallerCandidato = $talleresDelAlumno->first(function ($t) use ($horaActual) {
+                return $t->esDiaProgramado() && $t->estaEnHorario($horaActual);
+            });
+
+            $turnoRegular = ! empty($estudiante->turno) ? $estudiante->turno : 'Mañana';
+            $asistenciaRegularHoy = AsistenciaEstudiante::where('estudiante_id', $estudiante->id)
+                ->where('fecha', $hoy)
+                ->where(function ($q) {
+                    $q->where('tipo_actividad', 'CLASE_REGULAR')->orWhereNull('tipo_actividad');
+                })
+                ->first();
+
+            // Si tiene taller en este horario Y (o ya completó su asistencia regular hoy, o el turno del taller es contraturno)
+            if ($tallerCandidato && ($asistenciaRegularHoy || $tallerCandidato->turno !== $turnoRegular)) {
+                $tallerObjetivo = $tallerCandidato;
+                $tipoActividad = 'TALLER';
+            }
         }
 
-        $registro = AsistenciaEstudiante::where('estudiante_id', $estudiante->id)
-            ->where('fecha', $hoy)
-            ->first();
+        // Configuración de límites y tolerancias según el tipo de actividad
+        if ($tipoActividad === 'TALLER' && $tallerObjetivo) {
+            $turno = $tallerObjetivo->turno;
+            $limitePuntual = strlen($tallerObjetivo->hora_limite_puntual) === 5
+                ? $tallerObjetivo->hora_limite_puntual.':00'
+                : $tallerObjetivo->hora_limite_puntual;
+            $nombreActividad = 'Taller: '.$tallerObjetivo->nombre;
+            $tallerId = $tallerObjetivo->id;
 
-        // 1. Si no ha marcado ingreso hoy (o tenía una inasistencia previa que ahora se convierte en ingreso)
-        if (!$registro || (empty($registro->hora_ingreso) && str_contains($registro->estado, 'FALTA'))) {
+            $registro = AsistenciaEstudiante::where('estudiante_id', $estudiante->id)
+                ->where('fecha', $hoy)
+                ->where('tipo_actividad', 'TALLER')
+                ->where('taller_id', $tallerId)
+                ->first();
+        } else {
+            $tipoActividad = 'CLASE_REGULAR';
+            $tallerId = null;
+            $turno = ! empty($estudiante->turno) ? $estudiante->turno : 'Mañana';
+            $nombreActividad = "Clase Regular (Turno {$turno})";
+
+            $configTurno = HorarioTurno::where('empresa_id', $empresaId)
+                ->where('turno', $turno)
+                ->first();
+
+            $limitePuntual = '08:00:00';
+            if ($configTurno && ! empty($configTurno->hora_limite_puntual)) {
+                $limitePuntual = strlen($configTurno->hora_limite_puntual) === 5 ? $configTurno->hora_limite_puntual.':00' : $configTurno->hora_limite_puntual;
+            } elseif ($turno === 'Tarde') {
+                $limitePuntual = '13:30:00';
+            } elseif ($turno === 'Noche') {
+                $limitePuntual = '19:00:00';
+            }
+
+            $registro = AsistenciaEstudiante::where('estudiante_id', $estudiante->id)
+                ->where('fecha', $hoy)
+                ->where(function ($q) {
+                    $q->where('tipo_actividad', 'CLASE_REGULAR')->orWhereNull('tipo_actividad');
+                })
+                ->first();
+        }
+
+        // 1. Si no ha marcado ingreso (o tenía una inasistencia previa que ahora se convierte en ingreso)
+        if (! $registro || (empty($registro->hora_ingreso) && str_contains($registro->estado, 'FALTA'))) {
             $esTarde = strcmp($horaActual, $limitePuntual) > 0;
             $estado = $esTarde ? 'TARDANZA' : 'PUNTUAL';
             $limiteFormato = substr($limitePuntual, 0, 5);
-            $obs = $esTarde 
-                ? "Tardanza: Ingresó a las {$horaActual} (Límite Turno {$turno}: {$limiteFormato})" 
-                : "Ingreso puntual Turno {$turno}";
+            $obs = $esTarde
+                ? "Tardanza: Ingresó a las {$horaActual} (Límite {$nombreActividad}: {$limiteFormato})"
+                : "Ingreso puntual {$nombreActividad}";
 
             if ($registro) {
                 $registro->update([
                     'hora_ingreso' => $horaActual,
                     'turno' => $turno,
+                    'tipo_actividad' => $tipoActividad,
+                    'taller_id' => $tallerId,
                     'estado' => $estado,
                     'observacion' => $obs,
                 ]);
@@ -244,25 +326,29 @@ class AsistenciaEstudianteController extends Controller
                     'fecha' => $hoy,
                     'hora_ingreso' => $horaActual,
                     'turno' => $turno,
+                    'tipo_actividad' => $tipoActividad,
+                    'taller_id' => $tallerId,
                     'estado' => $estado,
                     'observacion' => $obs,
                 ]);
             }
 
             $badge = $estado === 'PUNTUAL' ? '✅ PUNTUAL' : '⚠️ TARDANZA';
-            $mensaje = "{$badge}: Ingreso registrado para {$estudiante->nombre_completo} [Turno {$turno}] a las {$horaActual}.";
+            $mensaje = "{$badge}: Ingreso registrado para {$estudiante->nombre_completo} [{$nombreActividad}] a las {$horaActual}.";
 
             $payload = [
                 'success' => true,
                 'asistencia_id' => $registro->id,
                 'tipo' => 'INGRESO',
                 'estado' => $estado,
+                'actividad' => $tipoActividad,
+                'actividad_nombre' => $nombreActividad,
                 'mensaje' => $mensaje,
                 'estudiante' => [
                     'id' => $estudiante->id,
                     'nombre' => $estudiante->nombre_completo,
                     'dni' => $estudiante->dni,
-                    'grado' => $estudiante->grado . ' "' . $estudiante->seccion . '"',
+                    'grado' => $estudiante->grado.' "'.$estudiante->seccion.'"',
                     'nivel' => $estudiante->nivel,
                     'turno' => $turno,
                 ],
@@ -280,21 +366,23 @@ class AsistenciaEstudianteController extends Controller
         // 2. Si ya marcó ingreso y no ha marcado salida
         if (empty($registro->hora_salida)) {
             // Protección contra doble lectura accidental de escáner dentro de 60 segundos
-            if (!app()->environment('testing') && !empty($registro->hora_ingreso)) {
+            if (! app()->environment('testing') && ! empty($registro->hora_ingreso)) {
                 $segundos = abs(strtotime($horaActual) - strtotime($registro->hora_ingreso));
                 if ($segundos < 60) {
-                    $mensaje = "ℹ️ El ingreso de {$estudiante->nombre_completo} ya fue registrado a las {$registro->hora_ingreso}. Espere al horario de salida o use el botón de corrección.";
+                    $mensaje = "ℹ️ El ingreso de {$estudiante->nombre_completo} a {$nombreActividad} ya fue registrado a las {$registro->hora_ingreso}. Espere al horario de salida o use el botón de corrección.";
                     $duplicadoPayload = [
                         'success' => true,
                         'asistencia_id' => $registro->id,
                         'tipo' => 'DUPLICADO_PREVENIDO',
                         'estado' => $registro->estado,
+                        'actividad' => $tipoActividad,
+                        'actividad_nombre' => $nombreActividad,
                         'mensaje' => $mensaje,
                         'estudiante' => [
                             'id' => $estudiante->id,
                             'nombre' => $estudiante->nombre_completo,
                             'dni' => $estudiante->dni,
-                            'grado' => $estudiante->grado . ' "' . $estudiante->seccion . '"',
+                            'grado' => $estudiante->grado.' "'.$estudiante->seccion.'"',
                             'nivel' => $estudiante->nivel,
                             'turno' => $turno,
                         ],
@@ -303,6 +391,7 @@ class AsistenciaEstudianteController extends Controller
                     if ($request->wantsJson() || $request->ajax()) {
                         return response()->json($duplicadoPayload);
                     }
+
                     return back()->with('info', $mensaje)->with('scan_result', $duplicadoPayload);
                 }
             }
@@ -311,19 +400,21 @@ class AsistenciaEstudianteController extends Controller
                 'hora_salida' => $horaActual,
             ]);
 
-            $mensaje = "🚪 SALIDA REGISTRADA: {$estudiante->nombre_completo} ha salido a las {$horaActual}.";
+            $mensaje = "🚪 SALIDA REGISTRADA: {$estudiante->nombre_completo} ha salido de {$nombreActividad} a las {$horaActual}.";
 
             $salidaPayload = [
                 'success' => true,
                 'asistencia_id' => $registro->id,
                 'tipo' => 'SALIDA',
                 'estado' => 'SALIDA',
+                'actividad' => $tipoActividad,
+                'actividad_nombre' => $nombreActividad,
                 'mensaje' => $mensaje,
                 'estudiante' => [
                     'id' => $estudiante->id,
                     'nombre' => $estudiante->nombre_completo,
                     'dni' => $estudiante->dni,
-                    'grado' => $estudiante->grado . ' "' . $estudiante->seccion . '"',
+                    'grado' => $estudiante->grado.' "'.$estudiante->seccion.'"',
                     'nivel' => $estudiante->nivel,
                     'turno' => $turno,
                 ],
@@ -337,19 +428,21 @@ class AsistenciaEstudianteController extends Controller
             return back()->with('success', $mensaje)->with('scan_result', $salidaPayload);
         }
 
-        $mensaje = "ℹ️ El alumno {$estudiante->nombre_completo} ya tiene registrado su ingreso ({$registro->hora_ingreso}) y su salida ({$registro->hora_salida}) para el día de hoy.";
+        $mensaje = "ℹ️ El alumno {$estudiante->nombre_completo} ya tiene registrado su ingreso ({$registro->hora_ingreso}) y su salida ({$registro->hora_salida}) en {$nombreActividad} para el día de hoy.";
 
         $completoPayload = [
             'success' => true,
             'asistencia_id' => $registro->id,
             'tipo' => 'COMPLETO',
             'estado' => $registro->estado,
+            'actividad' => $tipoActividad,
+            'actividad_nombre' => $nombreActividad,
             'mensaje' => $mensaje,
             'estudiante' => [
                 'id' => $estudiante->id,
                 'nombre' => $estudiante->nombre_completo,
                 'dni' => $estudiante->dni,
-                'grado' => $estudiante->grado . ' "' . $estudiante->seccion . '"',
+                'grado' => $estudiante->grado.' "'.$estudiante->seccion.'"',
                 'nivel' => $estudiante->nivel,
                 'turno' => $turno,
             ],
@@ -442,7 +535,7 @@ class AsistenciaEstudianteController extends Controller
 
         $estudiante = Estudiante::findOrFail($request->estudiante_id);
         $empresaId = (int) (session('empresa_id') ?? 1);
-        $turno = !empty($estudiante->turno) ? $estudiante->turno : 'Mañana';
+        $turno = ! empty($estudiante->turno) ? $estudiante->turno : 'Mañana';
 
         $registro = AsistenciaEstudiante::where('estudiante_id', $estudiante->id)
             ->where('fecha', $request->fecha)

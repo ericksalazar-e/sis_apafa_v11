@@ -31,7 +31,7 @@ class EmitirComprobanteSunatJob implements ShouldQueue
     public function handle(FacturacionService $facturacionService): void
     {
         $pago = Pago::withoutGlobalScopes()->find($this->pagoId);
-        if (!$pago) {
+        if (! $pago) {
             return;
         }
 
@@ -45,6 +45,7 @@ class EmitirComprobanteSunatJob implements ShouldQueue
                     'numero' => $resultado['numero'] ?? $pago->numero,
                     'hash_cpe' => $resultado['hash_cpe'] ?? null,
                     'mensaje_sunat' => $resultado['mensaje_sunat'] ?? 'Aceptado por SUNAT',
+                    'xml_url' => $resultado['xml_path'] ?? null,
                 ]);
             } else {
                 $pago->update([
@@ -53,10 +54,10 @@ class EmitirComprobanteSunatJob implements ShouldQueue
                 ]);
             }
         } catch (\Throwable $e) {
-            Log::error("Error emitiendo comprobante para Pago #{$this->pagoId}: " . $e->getMessage());
+            Log::error("Error emitiendo comprobante para Pago #{$this->pagoId}: ".$e->getMessage());
             $pago->update([
                 'estado_facturacion' => 'ERROR',
-                'mensaje_sunat' => 'Excepción: ' . $e->getMessage(),
+                'mensaje_sunat' => 'Excepción: '.$e->getMessage(),
             ]);
         }
     }

@@ -1,0 +1,26 @@
+#!/usr/bin/env bash
+# ========================================================
+# Git Pre-Push Hook - SIS-APAFA V11
+# Asegura que ningún commit rompa la batería de pruebas en remoto
+# ========================================================
+
+echo "🧪 [Pre-Push] Ejecutando batería de pruebas unitarias y de integración..."
+
+if docker compose ps --services --filter "status=running" | grep -q "app"; then
+    echo "🐳 Ejecutando tests dentro del contenedor Docker 'app'..."
+    docker compose exec -T app php artisan test
+    TEST_EXIT=$?
+else
+    echo "⚡ Ejecutando tests en entorno local..."
+    php artisan test
+    TEST_EXIT=$?
+fi
+
+if [ $TEST_EXIT -ne 0 ]; then
+    echo "❌ [Pre-Push] Las pruebas fallaron. El push hacia el repositorio remoto ha sido bloqueado."
+    echo "💡 Corrige los errores antes de intentar el push nuevamente."
+    exit 1
+fi
+
+echo "✅ [Pre-Push] Batería de pruebas aprobada con éxito. Procediendo con el push."
+exit 0

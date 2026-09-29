@@ -16,7 +16,7 @@ return new class extends Migration
             $table->string('pago_concepto', 255);
             $table->decimal('monto_pago', 10, 2);
             $table->decimal('debe', 10, 2)->default(0);
-            
+
             // Campos vinculados a la Facturación Electrónica (SUNAT / Microservicio)
             $table->string('tipo_comprobante', 50)->default('NOTA_VENTA'); // BOLETA, FACTURA, NOTA_VENTA
             $table->string('serie', 10)->nullable();

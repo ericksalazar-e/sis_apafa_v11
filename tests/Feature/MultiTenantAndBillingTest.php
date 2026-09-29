@@ -9,6 +9,7 @@ use App\Models\PadreFamilia;
 use App\Models\Pago;
 use App\Models\User;
 use App\Services\FacturacionService;
+use Illuminate\Foundation\Testing\DatabaseTransactions;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Storage;
@@ -16,10 +17,12 @@ use Tests\TestCase;
 
 class MultiTenantAndBillingTest extends TestCase
 {
+    use DatabaseTransactions;
+
     protected function setUp(): void
     {
         parent::setUp();
-        $admin = \App\Models\User::withoutGlobalScopes()->where('rol', 'ADMIN')->first();
+        $admin = User::withoutGlobalScopes()->where('rol', 'ADMIN')->first();
         if ($admin) {
             $this->actingAs($admin);
         }
@@ -74,7 +77,7 @@ class MultiTenantAndBillingTest extends TestCase
         $pago = Pago::first();
         $this->assertNotNull($pago, 'Debe haber al menos un pago registrado');
 
-        $service = new FacturacionService();
+        $service = new FacturacionService;
         $resultado = $service->procesarComprobante($pago);
 
         $this->assertTrue($resultado['success']);
@@ -89,7 +92,7 @@ class MultiTenantAndBillingTest extends TestCase
     public function test_estudiante_tarjeta_generation(): void
     {
         session(['empresa_id' => 1]);
-        $estudiante = \App\Models\Estudiante::first();
+        $estudiante = Estudiante::first();
         $this->assertNotNull($estudiante, 'Debe existir un estudiante');
 
         $response = $this->get(route('estudiantes.tarjeta', $estudiante));
@@ -142,14 +145,14 @@ class MultiTenantAndBillingTest extends TestCase
      */
     public function test_asistencia_estudiantes_filter_by_nivel_grado_and_seccion(): void
     {
-        $admin = \App\Models\User::first();
+        $admin = User::first();
         session(['empresa_id' => $admin->empresa_id]);
 
-        $padre = \App\Models\PadreFamilia::first();
+        $padre = PadreFamilia::first();
 
         // 1. Crear dos alumnos en diferentes niveles, grados y secciones
-        $dni1 = '8' . rand(1000000, 9999999);
-        $alumnoSecundaria = \App\Models\Estudiante::create([
+        $dni1 = '8'.rand(1000000, 9999999);
+        $alumnoSecundaria = Estudiante::create([
             'empresa_id' => $admin->empresa_id,
             'padre_familia_id' => $padre->id,
             'dni' => $dni1,
@@ -164,8 +167,8 @@ class MultiTenantAndBillingTest extends TestCase
             'estado' => 1,
         ]);
 
-        $dni2 = '8' . rand(1000000, 9999999);
-        $alumnoPrimaria = \App\Models\Estudiante::create([
+        $dni2 = '8'.rand(1000000, 9999999);
+        $alumnoPrimaria = Estudiante::create([
             'empresa_id' => $admin->empresa_id,
             'padre_familia_id' => $padre->id,
             'dni' => $dni2,
@@ -180,8 +183,8 @@ class MultiTenantAndBillingTest extends TestCase
             'estado' => 1,
         ]);
 
-        $dni3 = '8' . rand(1000000, 9999999);
-        $alumnoInicial = \App\Models\Estudiante::create([
+        $dni3 = '8'.rand(1000000, 9999999);
+        $alumnoInicial = Estudiante::create([
             'empresa_id' => $admin->empresa_id,
             'padre_familia_id' => $padre->id,
             'dni' => $dni3,
@@ -294,7 +297,7 @@ class MultiTenantAndBillingTest extends TestCase
     public function test_asistencia_estudiante_scanning_flow(): void
     {
         session(['empresa_id' => 1]);
-        $estudiante = \App\Models\Estudiante::first();
+        $estudiante = Estudiante::first();
         $this->assertNotNull($estudiante, 'Debe existir un estudiante');
 
         // Limpiar registro previo del día para esta prueba
@@ -362,7 +365,7 @@ class MultiTenantAndBillingTest extends TestCase
 
         $horarioManana = \App\Models\HorarioTurno::where('empresa_id', 1)->where('turno', 'Mañana')->first();
         $this->assertNotNull($horarioManana);
-        $this->assertEquals('07:45:00', strlen($horarioManana->hora_limite_puntual) === 5 ? $horarioManana->hora_limite_puntual . ':00' : $horarioManana->hora_limite_puntual);
+        $this->assertEquals('07:45:00', strlen($horarioManana->hora_limite_puntual) === 5 ? $horarioManana->hora_limite_puntual.':00' : $horarioManana->hora_limite_puntual);
         $this->assertTrue($horarioManana->activo);
     }
 
@@ -372,7 +375,7 @@ class MultiTenantAndBillingTest extends TestCase
     public function test_justificar_tardanza(): void
     {
         session(['empresa_id' => 1]);
-        $estudiante = \App\Models\Estudiante::first();
+        $estudiante = Estudiante::first();
 
         // Crear una tardanza
         $asistencia = \App\Models\AsistenciaEstudiante::create([
@@ -410,7 +413,7 @@ class MultiTenantAndBillingTest extends TestCase
     public function test_registrar_inasistencia_justificada(): void
     {
         session(['empresa_id' => 1]);
-        $estudiante = \App\Models\Estudiante::first();
+        $estudiante = Estudiante::first();
         $fechaManana = date('Y-m-d', strtotime('+1 day'));
 
         $response = $this->post(route('asistencia.estudiantes.justificar_falta'), [
@@ -496,7 +499,7 @@ class MultiTenantAndBillingTest extends TestCase
      */
     public function test_comite_vigilancia_is_read_only(): void
     {
-        $vigilante = \App\Models\User::withoutGlobalScopes()->where('rol', 'COMITE_VIGILANCIA')->first();
+        $vigilante = User::withoutGlobalScopes()->where('rol', 'COMITE_VIGILANCIA')->first();
         $this->actingAs($vigilante);
 
         // 1. Puede consultar y auditar pagos
@@ -542,7 +545,7 @@ class MultiTenantAndBillingTest extends TestCase
         $padre = PadreFamilia::withoutGlobalScopes()->with(['estudiantes', 'reuniones'])->first();
         $this->assertNotNull($padre, 'Debe existir un padre de familia para la consulta');
 
-        $response = $this->get('/?dni=' . $padre->padre_dni);
+        $response = $this->get('/?dni='.$padre->padre_dni);
         $response->assertStatus(200);
         $response->assertSee($padre->padre_nombres);
         $response->assertSee($padre->padre_dni);
@@ -570,7 +573,7 @@ class MultiTenantAndBillingTest extends TestCase
      */
     public function test_cuota_ordinaria_cannot_exceed_one_and_half_percent_of_uit(): void
     {
-        $admin = \App\Models\User::withoutGlobalScopes()->where('rol', 'ADMIN')->first();
+        $admin = User::withoutGlobalScopes()->where('rol', 'ADMIN')->first();
         session(['empresa_id' => 1]);
 
         // Intentar registrar una cuota ordinaria de S/ 100.00 con UIT S/ 5,350.00 (tope es S/ 80.25)
@@ -586,7 +589,7 @@ class MultiTenantAndBillingTest extends TestCase
         $response->assertSessionHasErrors('monto');
 
         // Registrar una cuota ordinaria válida de S/ 60.00 (dentro del tope legal de S/ 80.25)
-        $uniqueTitulo = 'CUOTA ORDINARIA LEGAL ' . uniqid();
+        $uniqueTitulo = 'CUOTA ORDINARIA LEGAL '.uniqid();
         $responseValida = $this->actingAs($admin)->post(route('aportes.store'), [
             'titulo' => $uniqueTitulo,
             'tipo' => 'ORDINARIA',
@@ -620,11 +623,11 @@ class MultiTenantAndBillingTest extends TestCase
      */
     public function test_aporte_eliminar_y_prevencion_duplicados(): void
     {
-        $admin = \App\Models\User::withoutGlobalScopes()->where('rol', 'ADMIN')->first();
+        $admin = User::withoutGlobalScopes()->where('rol', 'ADMIN')->first();
         session(['empresa_id' => 1]);
 
         // 1. Crear aporte de prueba
-        $tituloTemp = 'APORTE PRUEBA ELIMINAR ' . uniqid();
+        $tituloTemp = 'APORTE PRUEBA ELIMINAR '.uniqid();
         $this->actingAs($admin)->post(route('aportes.store'), [
             'titulo' => $tituloTemp,
             'tipo' => 'EXTRAORDINARIA',
@@ -665,7 +668,7 @@ class MultiTenantAndBillingTest extends TestCase
      */
     public function test_gastos_poa_view_and_budget_transparency(): void
     {
-        $admin = \App\Models\User::withoutGlobalScopes()->where('rol', 'ADMIN')->first();
+        $admin = User::withoutGlobalScopes()->where('rol', 'ADMIN')->first();
         session(['empresa_id' => 1]);
 
         // Cargar vista de gastos POA
@@ -721,13 +724,13 @@ class MultiTenantAndBillingTest extends TestCase
      */
     public function test_parentesco_padre_o_madre_o_ambos_and_conyuge(): void
     {
-        $admin = \App\Models\User::withoutGlobalScopes()->where('rol', 'ADMIN')->first();
+        $admin = User::withoutGlobalScopes()->where('rol', 'ADMIN')->first();
         session(['empresa_id' => 1]);
 
         $tipoAmbos = \App\Models\TipoConsanguinidad::where('nombre', 'AMBOS (PADRE Y MADRE)')->first();
         $this->assertNotNull($tipoAmbos);
 
-        $dniTest = '7' . rand(1000000, 9999999);
+        $dniTest = '7'.rand(1000000, 9999999);
         $response = $this->actingAs($admin)->post(route('padres.store'), [
             'padre_dni' => $dniTest,
             'padre_nombres' => 'CARLOS ALBERTO',
@@ -765,7 +768,7 @@ class MultiTenantAndBillingTest extends TestCase
         $tipoHermanoMayor = \App\Models\TipoConsanguinidad::where('nombre', 'HERMANO O HERMANA MAYOR')->first();
         $this->assertNotNull($tipoHermanoMayor, 'Debe existir HERMANO O HERMANA MAYOR en el catálogo');
 
-        $dniAbuelo = '7' . rand(1000000, 9999999);
+        $dniAbuelo = '7'.rand(1000000, 9999999);
         $this->actingAs($admin)->post(route('padres.store'), [
             'padre_dni' => $dniAbuelo,
             'padre_nombres' => 'MANUEL',
@@ -790,13 +793,13 @@ class MultiTenantAndBillingTest extends TestCase
      */
     public function test_apoderado_with_multiple_students_different_relationships_and_single_apafa_fee(): void
     {
-        $admin = \App\Models\User::withoutGlobalScopes()->where('rol', 'ADMIN')->first();
+        $admin = User::withoutGlobalScopes()->where('rol', 'ADMIN')->first();
         session(['empresa_id' => 1]);
 
         $tipoAbuelo = \App\Models\TipoConsanguinidad::where('nombre', 'ABUELO O ABUELA')->first();
 
         // 1. Registrar apoderado (ej. Abuelo/Tutor)
-        $dniApoderado = '8' . rand(1000000, 9999999);
+        $dniApoderado = '8'.rand(1000000, 9999999);
         $this->actingAs($admin)->post(route('padres.store'), [
             'padre_dni' => $dniApoderado,
             'padre_nombres' => 'SEGUNDO TOMAS',
@@ -811,9 +814,9 @@ class MultiTenantAndBillingTest extends TestCase
         $this->assertNotNull($apoderado);
 
         // 2. Asociar 3 estudiantes con diferentes vínculos familiares: Hijo, Nieto, Sobrino
-        $dniHijo = '7' . rand(1000000, 9999999);
-        $dniNieto = '7' . rand(1000000, 9999999);
-        $dniSobrino = '7' . rand(1000000, 9999999);
+        $dniHijo = '7'.rand(1000000, 9999999);
+        $dniNieto = '7'.rand(1000000, 9999999);
+        $dniSobrino = '7'.rand(1000000, 9999999);
 
         // Hijo
         $this->actingAs($admin)->post(route('estudiantes.store'), [
@@ -906,7 +909,7 @@ class MultiTenantAndBillingTest extends TestCase
 
         $padre = PadreFamilia::create([
             'empresa_id' => 1,
-            'padre_dni' => '9' . rand(1000000, 9999999),
+            'padre_dni' => '9'.rand(1000000, 9999999),
             'padre_nombres' => 'PADRE_TEST_FILTROS',
             'padre_ape_pat' => 'TEST',
             'padre_ape_mat' => 'TEST',
@@ -915,7 +918,7 @@ class MultiTenantAndBillingTest extends TestCase
         ]);
 
         // Crear alumnos de prueba para cada nivel
-        $dniInicial = '7' . rand(1000000, 9999999);
+        $dniInicial = '7'.rand(1000000, 9999999);
         $alumnoInicial = Estudiante::create([
             'empresa_id' => 1,
             'padre_familia_id' => $padre->id,
@@ -930,7 +933,7 @@ class MultiTenantAndBillingTest extends TestCase
             'parentesco' => 'HIJO(A)',
         ]);
 
-        $dniPrimaria = '7' . rand(1000000, 9999999);
+        $dniPrimaria = '7'.rand(1000000, 9999999);
         $alumnoPrimaria = Estudiante::create([
             'empresa_id' => 1,
             'padre_familia_id' => $padre->id,
@@ -945,7 +948,7 @@ class MultiTenantAndBillingTest extends TestCase
             'parentesco' => 'HIJO(A)',
         ]);
 
-        $dniSecundaria = '7' . rand(1000000, 9999999);
+        $dniSecundaria = '7'.rand(1000000, 9999999);
         $alumnoSecundaria = Estudiante::create([
             'empresa_id' => 1,
             'padre_familia_id' => $padre->id,
@@ -1053,7 +1056,7 @@ class MultiTenantAndBillingTest extends TestCase
         $this->assertNotNull($padre);
 
         $cargoTesorero = Cargo::where('nombre', 'like', '%TESORERO%')->first();
-        if (!$cargoTesorero) {
+        if (! $cargoTesorero) {
             $cargoTesorero = Cargo::create(['empresa_id' => 1, 'nombre' => 'TESORERO(A)']);
         }
 
@@ -1069,11 +1072,11 @@ class MultiTenantAndBillingTest extends TestCase
         $this->assertEquals($cargoTesorero->id, $padre->cargo_id);
 
         // 4. Crear Responsabilidad con Usuario y Contraseña
-        $randomUser = 'secretaria_' . rand(1000, 9999);
+        $randomUser = 'secretaria_'.rand(1000, 9999);
         $resNuevoUsuario = $this->actingAs($admin)->post(route('configuracion.usuarios.store'), [
             'name' => 'MARIA ELENA TORRES CASTILLO',
             'username' => $randomUser,
-            'email' => $randomUser . '@apafa.edu.pe',
+            'email' => $randomUser.'@apafa.edu.pe',
             'rol' => 'SECRETARIO',
             'cargo_titulo' => 'Secretaria General de Actas y Padrón',
             'password' => 'SecreClave2026*',
@@ -1092,7 +1095,7 @@ class MultiTenantAndBillingTest extends TestCase
         $resEditUsuario = $this->actingAs($admin)->put(route('configuracion.usuarios.update', $usuarioCreado), [
             'name' => 'MARIA ELENA TORRES DE QUISPE',
             'username' => $randomUser,
-            'email' => $randomUser . '@apafa.edu.pe',
+            'email' => $randomUser.'@apafa.edu.pe',
             'rol' => 'SECRETARIO',
             'cargo_titulo' => 'Secretaria General Titular',
             'estado' => 1,
@@ -1121,7 +1124,7 @@ class MultiTenantAndBillingTest extends TestCase
         session(['empresa_id' => $admin->empresa_id]);
 
         // 1. Crear Padre de Familia asociado
-        $dniPadre = '4' . rand(1000000, 9999999);
+        $dniPadre = '4'.rand(1000000, 9999999);
         $padre = PadreFamilia::create([
             'empresa_id' => $admin->empresa_id,
             'padre_dni' => $dniPadre,
@@ -1134,7 +1137,7 @@ class MultiTenantAndBillingTest extends TestCase
         ]);
 
         // 2. Escaneo móvil de estudiante con código QR compuesto vía JSON
-        $dniEstudiante = '7' . rand(1000000, 9999999);
+        $dniEstudiante = '7'.rand(1000000, 9999999);
         $estudiante = Estudiante::create([
             'empresa_id' => $admin->empresa_id,
             'padre_familia_id' => $padre->id,
@@ -1246,7 +1249,7 @@ class MultiTenantAndBillingTest extends TestCase
         session(['empresa_id' => $admin->empresa_id]);
 
         $fechaTest = '2026-11-15';
-        $tituloTest = 'ASAMBLEA EXTRAORDINARIA TEST ' . uniqid();
+        $tituloTest = 'ASAMBLEA EXTRAORDINARIA TEST '.uniqid();
 
         // 1. Crear asamblea
         $resStore = $this->actingAs($admin)->post(route('reuniones.store'), [
@@ -1319,7 +1322,3 @@ class MultiTenantAndBillingTest extends TestCase
         $responsePadres->assertSee(asset($empresa->foto_institucion), false);
     }
 }
-
-
-
-

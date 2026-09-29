@@ -23,7 +23,7 @@ class SetTenant
         }
 
         // 2. Asignar empresa por defecto (ID 1) si no existe en sesión
-        if (!session()->has('empresa_id')) {
+        if (! session()->has('empresa_id')) {
             session(['empresa_id' => 1]);
         }
 

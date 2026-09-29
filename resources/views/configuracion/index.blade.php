@@ -49,6 +49,24 @@
                 <i class="fa-solid fa-user-shield text-sm"></i>
                 <span>3. Responsabilidades, Usuarios y Contraseñas</span>
             </button>
+
+            <button onclick="cambiarTab('turnos-talleres')" id="tab-btn-turnos-talleres"
+                    class="py-3 px-1 border-b-2 text-xs font-bold transition-all flex items-center gap-2 whitespace-nowrap {{ $activeTab === 'turnos-talleres' ? 'border-indigo-600 text-indigo-600' : 'border-transparent text-slate-500 hover:text-slate-700 hover:border-slate-300' }}">
+                <i class="fa-solid fa-clock-rotate-left text-sm"></i>
+                <span>4. Turnos por Grado y Talleres</span>
+            </button>
+
+            <button onclick="cambiarTab('saldo-inicial')" id="tab-btn-saldo-inicial"
+                    class="py-3 px-1 border-b-2 text-xs font-bold transition-all flex items-center gap-2 whitespace-nowrap {{ $activeTab === 'saldo-inicial' ? 'border-indigo-600 text-indigo-600' : 'border-transparent text-slate-500 hover:text-slate-700 hover:border-slate-300' }}">
+                <i class="fa-solid fa-vault text-sm"></i>
+                <span>5. Fondo de Apertura y Saldo Inicial</span>
+            </button>
+
+            <button onclick="cambiarTab('apertura-anio')" id="tab-btn-apertura-anio"
+                    class="py-3 px-1 border-b-2 text-xs font-bold transition-all flex items-center gap-2 whitespace-nowrap {{ $activeTab === 'apertura-anio' ? 'border-indigo-600 text-indigo-600' : 'border-transparent text-slate-500 hover:text-slate-700 hover:border-slate-300' }}">
+                <i class="fa-solid fa-calendar-check text-sm"></i>
+                <span>6. Cierre y Apertura de Nuevo Año Escolar</span>
+            </button>
         </nav>
     </div>
 
@@ -69,15 +87,15 @@
 
                     <!-- Previsualizador de Logo -->
                     <div class="w-36 h-36 rounded-3xl bg-slate-50 border-2 border-dashed border-slate-300 flex items-center justify-center p-3 relative overflow-hidden shadow-inner group">
-                        @if(!empty($empresa->foto_institucion))
-                            <img id="logo-preview" src="{{ asset($empresa->foto_institucion) }}" alt="Logo Institución" class="max-h-full max-w-full object-contain">
-                        @else
-                            <div id="logo-placeholder" class="flex flex-col items-center justify-center text-slate-400">
-                                <i class="fa-solid fa-graduation-cap text-4xl text-indigo-400 mb-2"></i>
-                                <span class="text-[10px] font-bold uppercase tracking-wider">Sin Logo</span>
-                            </div>
-                            <img id="logo-preview" src="#" alt="Vista previa" class="max-h-full max-w-full object-contain hidden">
-                        @endif
+                        <img id="logo-preview" 
+                             src="{{ !empty($empresa->foto_institucion) ? asset($empresa->foto_institucion) : '#' }}" 
+                             alt="Logo Institución" 
+                             class="max-h-full max-w-full object-contain {{ empty($empresa->foto_institucion) ? 'hidden' : '' }}"
+                             onerror="this.classList.add('hidden'); var ph = document.getElementById('logo-placeholder'); if(ph) ph.classList.remove('hidden');">
+                        <div id="logo-placeholder" class="flex flex-col items-center justify-center text-slate-400 {{ !empty($empresa->foto_institucion) ? 'hidden' : '' }}">
+                            <i class="fa-solid fa-graduation-cap text-4xl text-indigo-400 mb-2"></i>
+                            <span class="text-[10px] font-bold uppercase tracking-wider">Sin Logo</span>
+                        </div>
                     </div>
 
                     <!-- Input de Archivo -->
@@ -915,25 +933,925 @@
     </div>
 </div>
 
+    <!-- ==================== SECCIÓN 4: TURNOS POR GRADO Y TALLERES EXTRACURRICULARES ==================== -->
+    <div id="tab-content-turnos-talleres" class="{{ $activeTab === 'turnos-talleres' ? '' : 'hidden' }} space-y-8">
+        
+        <!-- Header Principal de Sección -->
+        <div class="flex flex-col lg:flex-row lg:items-center justify-between gap-4 bg-gradient-to-r from-slate-900 via-indigo-950 to-slate-900 p-6 rounded-3xl text-white shadow-xl">
+            <div>
+                <div class="flex items-center gap-3">
+                    <span class="w-10 h-10 rounded-2xl bg-indigo-500/20 text-indigo-400 flex items-center justify-center text-lg border border-indigo-500/30">
+                        <i class="fa-solid fa-clock-rotate-left"></i>
+                    </span>
+                    <div>
+                        <h3 class="text-lg font-black tracking-tight">Turnos por Grado/Sección y Talleres en Contraturno</h3>
+                        <p class="text-xs text-indigo-200/80 mt-0.5">
+                            Asigne el turno escolar oficial a cada aula y programe talleres extracurriculares fuera del horario habitual de clases.
+                        </p>
+                    </div>
+                </div>
+            </div>
+
+            <div class="flex flex-wrap items-center gap-2.5">
+                <form action="{{ route('configuracion.grados_turnos.sincronizar') }}" method="POST"
+                      onsubmit="return confirm('¿Desea sincronizar y actualizar el turno de todos los estudiantes registrados según la matriz de turnos configurada?');">
+                    @csrf
+                    <button type="submit" class="px-4 py-2 bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl text-xs font-bold transition-all flex items-center gap-2 shadow-lg shadow-indigo-600/30">
+                        <i class="fa-solid fa-arrows-rotate"></i>
+                        <span>Sincronizar Alumnos Existentes</span>
+                    </button>
+                </form>
+
+                <a href="{{ route('asistencia.estudiantes.index') }}" 
+                   class="px-4 py-2 bg-white/10 hover:bg-white/20 text-white rounded-xl text-xs font-bold transition-all flex items-center gap-2 border border-white/10">
+                    <i class="fa-solid fa-qrcode text-indigo-300"></i>
+                    <span>Ir a Control de Asistencia</span>
+                </a>
+            </div>
+        </div>
+
+        <!-- 1. MATRIZ DE TURNOS POR GRADO Y SECCIÓN -->
+        <div class="space-y-4">
+            <div class="flex items-center justify-between border-b border-slate-200 pb-3">
+                <div>
+                    <h4 class="font-extrabold text-slate-800 text-sm flex items-center gap-2">
+                        <i class="fa-solid fa-layer-group text-indigo-600"></i> Matriz de Turnos Oficiales por Aula
+                    </h4>
+                    <p class="text-xs text-slate-500">
+                        Configure a qué turno (Mañana, Tarde o Noche) asisten las clases regulares de cada Grado y Sección.
+                    </p>
+                </div>
+            </div>
+
+            <!-- Formulario de Asignación / Registro de Turno -->
+            <div class="bg-white p-5 rounded-2xl border border-slate-200/80 shadow-sm">
+                <form action="{{ route('configuracion.grados_turnos.store') }}" method="POST" class="space-y-4">
+                    @csrf
+                    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-6 gap-3 items-end">
+                        <div>
+                            <label class="block text-[11px] font-bold text-slate-600 uppercase mb-1">Nivel Educativo *</label>
+                            <select name="nivel" id="gst-nivel" required class="w-full text-xs font-semibold px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:bg-white">
+                                <option value="Primaria">Primaria</option>
+                                <option value="Secundaria">Secundaria</option>
+                                <option value="Inicial">Inicial</option>
+                                <option value="CEBA">CEBA / Nocturna</option>
+                            </select>
+                        </div>
+
+                        <div>
+                            <label class="block text-[11px] font-bold text-slate-600 uppercase mb-1">Grado *</label>
+                            <input type="text" name="grado" id="gst-grado" list="lista-grados-sugeridos" required placeholder="Ej. 1ro, 2do..."
+                                   class="w-full text-xs font-semibold px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:bg-white">
+                            <datalist id="lista-grados-sugeridos">
+                                <option value="3 Años">
+                                <option value="4 Años">
+                                <option value="5 Años">
+                                <option value="1ro">
+                                <option value="2do">
+                                <option value="3ro">
+                                <option value="4to">
+                                <option value="5to">
+                                <option value="6to">
+                            </datalist>
+                        </div>
+
+                        <div>
+                            <label class="block text-[11px] font-bold text-slate-600 uppercase mb-1">Sección *</label>
+                            <input type="text" name="seccion" id="gst-seccion" maxlength="10" required placeholder="Ej. A, B, Única"
+                                   class="w-full text-xs font-bold uppercase px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:bg-white">
+                        </div>
+
+                        <div>
+                            <label class="block text-[11px] font-bold text-slate-600 uppercase mb-1">Turno Asignado *</label>
+                            <select name="turno" id="gst-turno" required class="w-full text-xs font-bold px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:bg-white">
+                                <option value="Mañana">☀️ Turno Mañana</option>
+                                <option value="Tarde">🌤️ Turno Tarde</option>
+                                <option value="Noche">🌙 Turno Noche</option>
+                            </select>
+                        </div>
+
+                        <div>
+                            <label class="block text-[11px] font-bold text-slate-600 uppercase mb-1">Tutor / Aula (Opcional)</label>
+                            <input type="text" name="tutor" id="gst-tutor" placeholder="Ej. Prof. García / Aula 101"
+                                   class="w-full text-xs px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:bg-white">
+                        </div>
+
+                        <div>
+                            <button type="submit" class="w-full py-2 px-4 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-xs font-bold transition-all shadow-sm flex items-center justify-center gap-2">
+                                <i class="fa-solid fa-floppy-disk"></i>
+                                <span>Guardar Turno</span>
+                            </button>
+                        </div>
+                    </div>
+
+                    <div class="flex items-center gap-2 pt-2 border-t border-slate-100">
+                        <label class="flex items-center gap-2 text-xs font-medium text-slate-600 cursor-pointer">
+                            <input type="checkbox" name="sincronizar_alumnos" value="1" checked
+                                   class="rounded border-slate-300 text-indigo-600 focus:ring-indigo-500">
+                            <span>Actualizar automáticamente el turno de todos los estudiantes matriculados actualmente en este grado y sección.</span>
+                        </label>
+                    </div>
+                </form>
+            </div>
+
+            <!-- Tabla de Grados y Secciones Configurados -->
+            <div class="bg-white rounded-2xl border border-slate-200/80 shadow-sm overflow-hidden">
+                <div class="p-4 bg-slate-50/50 border-b border-slate-200 flex items-center justify-between">
+                    <span class="text-xs font-extrabold text-slate-700 uppercase tracking-wider">
+                        Aulas Configuradas ({{ $gradosSeccionesTurnos->count() }})
+                    </span>
+                    <span class="text-[11px] text-slate-500">
+                        Los nuevos alumnos matriculados en estas aulas heredarán el turno configurado automáticamente.
+                    </span>
+                </div>
+
+                <div class="overflow-x-auto">
+                    <table class="w-full text-left text-xs text-slate-600">
+                        <thead class="bg-slate-50 border-b border-slate-200 text-slate-500 uppercase tracking-wider text-[10px]">
+                            <tr>
+                                <th class="p-3.5">Nivel</th>
+                                <th class="p-3.5">Grado y Sección</th>
+                                <th class="p-3.5">Turno Asignado</th>
+                                <th class="p-3.5">Horario Oficial</th>
+                                <th class="p-3.5">Tutor / Aula</th>
+                                <th class="p-3.5 text-center">Alumnos en Aula</th>
+                                <th class="p-3.5 text-right">Acciones</th>
+                            </tr>
+                        </thead>
+                        <tbody class="divide-y divide-slate-100">
+                            @forelse($gradosSeccionesTurnos as $gst)
+                                @php
+                                    $hTurno = $horariosTurnos->get($gst->turno);
+                                    $badgeColor = match($gst->turno) {
+                                        'Mañana' => 'bg-amber-50 text-amber-700 border-amber-200',
+                                        'Tarde' => 'bg-blue-50 text-blue-700 border-blue-200',
+                                        'Noche' => 'bg-purple-50 text-purple-700 border-purple-200',
+                                        default => 'bg-slate-100 text-slate-700 border-slate-200',
+                                    };
+                                @endphp
+                                <tr class="hover:bg-slate-50/70 transition-colors">
+                                    <td class="p-3.5 font-bold text-slate-800">
+                                        <span class="px-2.5 py-1 rounded-lg text-[10px] font-bold bg-slate-100 text-slate-700 border border-slate-200">
+                                            {{ $gst->nivel }}
+                                        </span>
+                                    </td>
+                                    <td class="p-3.5 font-black text-slate-900 text-sm">
+                                        {{ $gst->grado }} "{{ $gst->seccion }}"
+                                    </td>
+                                    <td class="p-3.5">
+                                        <span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-extrabold border {{ $badgeColor }}">
+                                            <span class="w-1.5 h-1.5 rounded-full {{ $gst->turno === 'Mañana' ? 'bg-amber-500' : ($gst->turno === 'Tarde' ? 'bg-blue-500' : 'bg-purple-500') }}"></span>
+                                            Turno {{ $gst->turno }}
+                                        </span>
+                                    </td>
+                                    <td class="p-3.5 text-slate-500 text-[11px]">
+                                        @if($hTurno)
+                                            <span class="font-mono text-slate-700">{{ substr($hTurno->hora_ingreso, 0, 5) }}</span>
+                                            - <span class="font-mono text-slate-700">{{ substr($hTurno->hora_salida, 0, 5) }}</span>
+                                            <span class="text-rose-600 block text-[10px]">Tol: {{ substr($hTurno->hora_limite_puntual, 0, 5) }}</span>
+                                        @else
+                                            <span class="italic text-slate-400">Predeterminado</span>
+                                        @endif
+                                    </td>
+                                    <td class="p-3.5 text-slate-600">
+                                        {{ $gst->tutor ?? $gst->aula ?? '—' }}
+                                    </td>
+                                    <td class="p-3.5 text-center">
+                                        <span class="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full font-bold text-xs bg-slate-100 text-slate-800">
+                                            <i class="fa-solid fa-user-graduate text-[10px] text-indigo-500"></i>
+                                            {{ $gst->totalEstudiantes() }}
+                                        </span>
+                                    </td>
+                                    <td class="p-3.5 text-right">
+                                        <form action="{{ route('configuracion.grados_turnos.destroy', $gst->id) }}" method="POST"
+                                              onsubmit="return confirm('¿Está seguro de eliminar la configuración de turno para {{ $gst->nivel }} {{ $gst->grado }} \'{{ $gst->seccion }}\'?');"
+                                              class="inline-block">
+                                            @csrf
+                                            @method('DELETE')
+                                            <button type="submit" title="Eliminar Asignación"
+                                                    class="w-7 h-7 rounded-lg bg-rose-50 text-rose-600 hover:bg-rose-100 transition-colors flex items-center justify-center">
+                                                <i class="fa-solid fa-trash-can text-xs"></i>
+                                            </button>
+                                        </form>
+                                    </td>
+                                </tr>
+                            @empty
+                                <tr>
+                                    <td colspan="7" class="p-8 text-center text-slate-400">
+                                        <i class="fa-solid fa-layer-group text-3xl mb-2 text-slate-300 block"></i>
+                                        <p class="font-bold text-slate-600 text-xs">No hay turnos configurados por grado y sección aún.</p>
+                                        <p class="text-[11px] text-slate-400 mt-1">Utilice el formulario superior o elija una de las aulas detectadas abajo.</p>
+                                    </td>
+                                </tr>
+                            @endforelse
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- Sugerencias Rápidas de Aulas Detectadas en Estudiantes -->
+            @if(isset($gradosSeccionesExistentes) && $gradosSeccionesExistentes->count() > 0)
+                <div class="bg-indigo-50/50 p-4 rounded-2xl border border-indigo-100 space-y-2">
+                    <span class="text-[11px] font-extrabold text-indigo-900 uppercase tracking-wider block">
+                        <i class="fa-solid fa-lightbulb text-amber-500"></i> Aulas Detectadas en el Padrón de Estudiantes:
+                    </span>
+                    <div class="flex flex-wrap gap-2">
+                        @foreach($gradosSeccionesExistentes as $gse)
+                            @php
+                                $yaConfigurado = $gradosSeccionesTurnos->first(function ($item) use ($gse) {
+                                    return strtolower(trim($item->nivel)) === strtolower(trim($gse->nivel))
+                                        && strtolower(trim($item->grado)) === strtolower(trim($gse->grado))
+                                        && strtolower(trim($item->seccion)) === strtolower(trim($gse->seccion));
+                                });
+                            @endphp
+                            <button type="button" 
+                                    onclick="precargarAula('{{ $gse->nivel }}', '{{ $gse->grado }}', '{{ $gse->seccion }}')"
+                                    class="px-2.5 py-1 rounded-xl text-xs font-bold transition-all border flex items-center gap-1.5 {{ $yaConfigurado ? 'bg-white text-emerald-700 border-emerald-200' : 'bg-white text-indigo-700 border-indigo-200 hover:bg-indigo-600 hover:text-white' }}">
+                                @if($yaConfigurado)
+                                    <i class="fa-solid fa-check text-[10px] text-emerald-500"></i>
+                                    <span>{{ $gse->nivel }} {{ $gse->grado }} "{{ $gse->seccion }}" ({{ $yaConfigurado->turno }})</span>
+                                @else
+                                    <i class="fa-solid fa-plus text-[10px]"></i>
+                                    <span>{{ $gse->nivel }} {{ $gse->grado }} "{{ $gse->seccion }}"</span>
+                                @endif
+                            </button>
+                        @endforeach
+                    </div>
+                </div>
+            @endif
+        </div>
+
+        <!-- 2. TALLERES EXTRACURRICULARES Y ACTIVIDADES FUERA DE TURNO (CONTRATURNO) -->
+        <div class="space-y-4 pt-4 border-t border-slate-200">
+            <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                <div>
+                    <h4 class="font-extrabold text-slate-800 text-sm flex items-center gap-2">
+                        <i class="fa-solid fa-shapes text-indigo-600"></i> Talleres Extracurriculares y Actividades en Contraturno
+                    </h4>
+                    <p class="text-xs text-slate-500">
+                        Programe actividades fuera de la jornada regular (ej. talleres deportivos, robótica, música o reforzamiento) para registrar asistencia diferenciada.
+                    </p>
+                </div>
+                <button type="button" onclick="document.getElementById('form-nuevo-taller').classList.toggle('hidden')"
+                        class="px-4 py-2 bg-slate-900 hover:bg-indigo-900 text-white rounded-xl text-xs font-bold transition-all flex items-center gap-2 shadow-sm self-start sm:self-auto">
+                    <i class="fa-solid fa-plus text-indigo-400"></i>
+                    <span>Crear Nuevo Taller</span>
+                </button>
+            </div>
+
+            <!-- Formulario Colapsable para Crear Nuevo Taller -->
+            <div id="form-nuevo-taller" class="bg-white p-5 rounded-2xl border border-slate-200 shadow-md space-y-4 hidden">
+                <div class="flex items-center justify-between border-b border-slate-100 pb-3">
+                    <h5 class="text-xs font-black text-slate-800 uppercase tracking-wider flex items-center gap-2">
+                        <i class="fa-solid fa-circle-plus text-indigo-600"></i> Registrar Taller Extracurricular
+                    </h5>
+                    <button type="button" onclick="document.getElementById('form-nuevo-taller').classList.add('hidden')"
+                            class="text-slate-400 hover:text-slate-600 text-sm">
+                        <i class="fa-solid fa-xmark"></i>
+                    </button>
+                </div>
+
+                <form action="{{ route('configuracion.talleres.store') }}" method="POST" class="space-y-4">
+                    @csrf
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-3">
+                        <div class="md:col-span-2">
+                            <label class="block text-[11px] font-bold text-slate-700 uppercase mb-1">Nombre del Taller *</label>
+                            <input type="text" name="nombre" required placeholder="Ej. Taller de Robótica y Computación"
+                                   class="w-full text-xs font-bold px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:bg-white">
+                        </div>
+
+                        <div>
+                            <label class="block text-[11px] font-bold text-slate-700 uppercase mb-1">Turno en que se Dicta *</label>
+                            <select name="turno" required class="w-full text-xs font-bold px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:bg-white">
+                                <option value="Tarde">🌤️ Tarde (Contraturno de Mañana)</option>
+                                <option value="Mañana">☀️ Mañana (Contraturno de Tarde)</option>
+                                <option value="Noche">🌙 Noche</option>
+                                <option value="Sábado">📅 Sábado</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                        <div>
+                            <label class="block text-[11px] font-bold text-slate-700 uppercase mb-1">Aplica a Nivel *</label>
+                            <select name="nivel" required class="w-full text-xs px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:bg-white">
+                                <option value="Todos">Todos los Niveles</option>
+                                <option value="Primaria">Primaria</option>
+                                <option value="Secundaria">Secundaria</option>
+                                <option value="Inicial">Inicial</option>
+                            </select>
+                        </div>
+
+                        <div>
+                            <label class="block text-[11px] font-bold text-slate-700 uppercase mb-1">Aplica a Grado *</label>
+                            <input type="text" name="grado" value="Todos" required placeholder="Ej. Todos, o 3ro, 4to..."
+                                   class="w-full text-xs font-semibold px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:bg-white">
+                            <span class="text-[10px] text-slate-400">Escriba "Todos" o un grado específico como "3ro".</span>
+                        </div>
+
+                        <div>
+                            <label class="block text-[11px] font-bold text-slate-700 uppercase mb-1">Aplica a Sección *</label>
+                            <input type="text" name="seccion" value="Todas" required placeholder="Ej. Todas, o A, B..."
+                                   class="w-full text-xs font-semibold px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:bg-white">
+                            <span class="text-[10px] text-slate-400">Escriba "Todas" o una sección específica.</span>
+                        </div>
+                    </div>
+
+                    <!-- Horarios del Taller -->
+                    <div class="grid grid-cols-1 sm:grid-cols-3 gap-3 p-3.5 bg-slate-50 rounded-xl border border-slate-200">
+                        <div>
+                            <label class="block text-[11px] font-bold text-slate-700 uppercase mb-1">Hora Inicio *</label>
+                            <input type="time" name="hora_inicio" value="14:30" required
+                                   class="w-full text-xs font-mono font-bold px-3 py-2 bg-white border border-slate-200 rounded-xl focus:ring-2 focus:ring-indigo-500">
+                        </div>
+
+                        <div>
+                            <label class="block text-[11px] font-bold text-rose-600 uppercase mb-1">Límite Tolerancia (Puntual) *</label>
+                            <input type="time" name="hora_limite_puntual" value="14:45" required
+                                   class="w-full text-xs font-mono font-bold px-3 py-2 bg-rose-50/50 border border-rose-200 text-rose-700 rounded-xl focus:ring-2 focus:ring-rose-500">
+                        </div>
+
+                        <div>
+                            <label class="block text-[11px] font-bold text-slate-700 uppercase mb-1">Hora Fin / Salida *</label>
+                            <input type="time" name="hora_fin" value="16:30" required
+                                   class="w-full text-xs font-mono font-bold px-3 py-2 bg-white border border-slate-200 rounded-xl focus:ring-2 focus:ring-indigo-500">
+                        </div>
+                    </div>
+
+                    <!-- Días de la semana -->
+                    <div>
+                        <label class="block text-[11px] font-bold text-slate-700 uppercase mb-1.5">Días Programados *</label>
+                        <div class="flex flex-wrap gap-2">
+                            @foreach(['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado'] as $dia)
+                                <label class="flex items-center gap-1.5 px-3 py-1.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold text-slate-700 cursor-pointer hover:bg-slate-100">
+                                    <input type="checkbox" name="dias_semana[]" value="{{ $dia }}"
+                                           {{ in_array($dia, ['Lunes', 'Miércoles', 'Viernes']) ? 'checked' : '' }}
+                                           class="rounded border-slate-300 text-indigo-600 focus:ring-indigo-500">
+                                    <span>{{ $dia }}</span>
+                                </label>
+                            @endforeach
+                        </div>
+                    </div>
+
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                        <div>
+                            <label class="block text-[11px] font-bold text-slate-700 uppercase mb-1">Docente / Instructor Responsable</label>
+                            <input type="text" name="docente_responsable" placeholder="Ej. Prof. Juan Quispe"
+                                   class="w-full text-xs px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:bg-white">
+                        </div>
+
+                        <div>
+                            <label class="block text-[11px] font-bold text-slate-700 uppercase mb-1">Lugar / Pabellón</label>
+                            <input type="text" name="lugar" placeholder="Ej. Laboratorio de Cómputo / Cancha"
+                                   class="w-full text-xs px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:bg-white">
+                        </div>
+                    </div>
+
+                    <div class="flex items-center justify-end gap-2 pt-2 border-t border-slate-100">
+                        <button type="button" onclick="document.getElementById('form-nuevo-taller').classList.add('hidden')"
+                                class="px-4 py-2 border border-slate-200 text-slate-600 rounded-xl text-xs font-bold hover:bg-slate-50 transition-colors">
+                            Cancelar
+                        </button>
+                        <button type="submit" class="px-5 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-xs font-bold shadow-md transition-colors flex items-center gap-2">
+                            <i class="fa-solid fa-check"></i>
+                            <span>Crear Taller</span>
+                        </button>
+                    </div>
+                </form>
+            </div>
+
+            <!-- Listado de Talleres Registrados -->
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                @forelse($talleres as $taller)
+                    @php
+                        $badgeTurnoTaller = match($taller->turno) {
+                            'Mañana' => 'bg-amber-50 text-amber-700 border-amber-200',
+                            'Tarde' => 'bg-blue-50 text-blue-700 border-blue-200',
+                            'Noche' => 'bg-purple-50 text-purple-700 border-purple-200',
+                            default => 'bg-emerald-50 text-emerald-700 border-emerald-200',
+                        };
+                    @endphp
+                    <div class="bg-white rounded-2xl border border-slate-200/80 p-5 shadow-sm hover:shadow-md transition-shadow flex flex-col justify-between space-y-4">
+                        <div class="space-y-3">
+                            <div class="flex items-start justify-between gap-2">
+                                <div>
+                                    <span class="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-extrabold border {{ $badgeTurnoTaller }}">
+                                        Turno {{ $taller->turno }}
+                                    </span>
+                                    <h5 class="text-sm font-black text-slate-900 mt-1 leading-snug">{{ $taller->nombre }}</h5>
+                                </div>
+                                <div class="flex items-center gap-1">
+                                    <button type="button" onclick="abrirEditarTaller({{ json_encode($taller) }})" 
+                                            title="Editar Taller"
+                                            class="w-7 h-7 rounded-lg bg-slate-100 text-slate-600 hover:bg-slate-200 transition-colors flex items-center justify-center">
+                                        <i class="fa-solid fa-pen text-xs"></i>
+                                    </button>
+                                    <form action="{{ route('configuracion.talleres.destroy', $taller->id) }}" method="POST"
+                                          onsubmit="return confirm('¿Está seguro de eliminar el taller \'{{ $taller->nombre }}\'?');"
+                                          class="inline-block">
+                                        @csrf
+                                        @method('DELETE')
+                                        <button type="submit" title="Eliminar Taller"
+                                                class="w-7 h-7 rounded-lg bg-rose-50 text-rose-600 hover:bg-rose-100 transition-colors flex items-center justify-center">
+                                            <i class="fa-solid fa-trash-can text-xs"></i>
+                                        </button>
+                                    </form>
+                                </div>
+                            </div>
+
+                            <!-- Grados y Secciones Objetivo -->
+                            <div class="text-[11px] text-slate-600 bg-slate-50 p-2.5 rounded-xl border border-slate-100 space-y-1">
+                                <div class="flex items-center justify-between">
+                                    <span class="text-slate-400 font-bold uppercase text-[9px]">Dirigido a:</span>
+                                    <span class="font-bold text-indigo-700">
+                                        {{ $taller->nivel }} • {{ $taller->grado }} "{{ $taller->seccion }}"
+                                    </span>
+                                </div>
+                                <div class="flex items-center justify-between">
+                                    <span class="text-slate-400 font-bold uppercase text-[9px]">Horario:</span>
+                                    <span class="font-mono font-bold text-slate-800">
+                                        {{ substr($taller->hora_inicio, 0, 5) }} - {{ substr($taller->hora_fin, 0, 5) }}
+                                        <span class="text-rose-600 text-[10px]">(Tol: {{ substr($taller->hora_limite_puntual, 0, 5) }})</span>
+                                    </span>
+                                </div>
+                            </div>
+
+                            <!-- Días de dictado -->
+                            <div class="flex flex-wrap gap-1">
+                                @foreach($taller->dias_array as $dia)
+                                    <span class="px-2 py-0.5 rounded-md text-[10px] font-bold bg-slate-100 text-slate-700 border border-slate-200">
+                                        {{ $dia }}
+                                    </span>
+                                @endforeach
+                            </div>
+
+                            @if($taller->docente_responsable || $taller->lugar)
+                                <p class="text-[11px] text-slate-500 flex items-center gap-1.5">
+                                    <i class="fa-solid fa-chalkboard-user text-indigo-500"></i>
+                                    <span>{{ $taller->docente_responsable ?? 'Sin docente asignado' }}</span>
+                                    @if($taller->lugar)
+                                        <span class="text-slate-300">•</span>
+                                        <span>{{ $taller->lugar }}</span>
+                                    @endif
+                                </p>
+                            @endif
+                        </div>
+
+                        <div class="pt-2 border-t border-slate-100 flex items-center justify-between text-[11px] text-slate-400">
+                            <span>Asistencias registradas:</span>
+                            <span class="font-bold text-slate-800 font-mono">{{ $taller->asistencias_count }}</span>
+                        </div>
+                    </div>
+                @empty
+                    <div class="col-span-full bg-white p-8 rounded-2xl border border-slate-200 text-center text-slate-400">
+                        <i class="fa-solid fa-shapes text-3xl mb-2 text-slate-300 block"></i>
+                        <p class="font-bold text-slate-600 text-xs">No hay talleres extracurriculares registrados.</p>
+                        <p class="text-[11px] text-slate-400 mt-1">Haga clic en "Crear Nuevo Taller" para configurar clases en contraturno.</p>
+                    </div>
+                @endforelse
+            </div>
+        </div>
+
+    </div>
+
+    <!-- ==================== SECCIÓN 5: FONDO DE APERTURA Y SALDO INICIAL ==================== -->
+    <div id="tab-content-saldo-inicial" class="{{ $activeTab === 'saldo-inicial' ? '' : 'hidden' }} space-y-6">
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            <!-- Columna Izquierda: Tarjeta Informativa del Saldo Actual -->
+            <div class="bg-white rounded-3xl p-6 border border-slate-200/90 shadow-sm space-y-4">
+                <div class="w-14 h-14 rounded-2xl bg-gradient-to-tr from-indigo-600 to-violet-600 text-white flex items-center justify-center text-2xl shadow-lg shadow-indigo-600/30">
+                    <i class="fa-solid fa-vault"></i>
+                </div>
+                <div>
+                    <span class="text-[11px] uppercase font-bold text-slate-400 tracking-wider block">Fondo de Apertura Consolidado</span>
+                    <h3 class="text-3xl font-black text-slate-900 font-mono mt-1">
+                        S/ {{ number_format($empresa->saldo_inicial_caja ?? 0, 2) }}
+                    </h3>
+                    <p class="text-xs text-slate-500 mt-1">
+                        Saldo inicial contabilizado en la cuenta y caja de la APAFA.
+                    </p>
+                </div>
+
+                <div class="pt-4 border-t border-slate-100 space-y-2 text-xs">
+                    <div class="flex justify-between items-center py-1">
+                        <span class="text-slate-500 font-medium">Fecha de Corte / Arqueo:</span>
+                        <span class="font-bold text-slate-800 font-mono">
+                            {{ $empresa->fecha_saldo_inicial ? $empresa->fecha_saldo_inicial->format('d/m/Y') : 'No configurada' }}
+                        </span>
+                    </div>
+                    <div class="flex justify-between items-center py-1">
+                        <span class="text-slate-500 font-medium">Doc. Sustento:</span>
+                        <span class="font-bold text-indigo-700 truncate max-w-[180px]" title="{{ $empresa->sustento_saldo_inicial ?? '-' }}">
+                            {{ $empresa->sustento_saldo_inicial ?? 'Sin acta registrada' }}
+                        </span>
+                    </div>
+                </div>
+
+                <div class="p-3.5 bg-emerald-50 rounded-2xl border border-emerald-200/70 text-emerald-900 text-[11px] space-y-1.5">
+                    <p class="font-bold flex items-center gap-1.5 text-emerald-800">
+                        <i class="fa-solid fa-circle-check text-emerald-600"></i> Integración Contable Activa:
+                    </p>
+                    <ul class="list-disc pl-4 space-y-0.5 text-emerald-800/90 text-[10.5px]">
+                        <li>Este monto se suma automáticamente a la recaudación real en <b>Gastos POA</b>.</li>
+                        <li>Evita alertas falsas de déficit cuando la APAFA compra bienes o materiales con fondos previos.</li>
+                        <li>Es reconocido formalmente en los dictámenes del <b>Consejo de Vigilancia</b>.</li>
+                    </ul>
+                </div>
+            </div>
+
+            <!-- Columna Central y Derecha: Formulario de Actualización -->
+            <div class="lg:col-span-2 bg-white rounded-3xl p-6 border border-slate-200/90 shadow-sm space-y-5">
+                <div class="border-b border-slate-100 pb-3">
+                    <h3 class="font-extrabold text-slate-800 text-sm flex items-center gap-2">
+                        <i class="fa-solid fa-file-invoice-dollar text-indigo-600"></i> Registrar o Modificar Fondo de Apertura (Dinero Previo)
+                    </h3>
+                    <p class="text-xs text-slate-400 mt-0.5">
+                        Incorpore el dinero existente en efectivo o cuenta bancaria previo a la implementación del sistema o transferido por la gestión saliente (Ley N° 28628 y D.S. N.º 007-2006-ED).
+                    </p>
+                </div>
+
+                <form action="{{ route('configuracion.saldo_inicial.update') }}" method="POST" class="space-y-4 text-xs">
+                    @csrf
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                        <div>
+                            <label class="block font-bold text-slate-700 mb-1">Monto en Caja / Banco (S/) *</label>
+                            <div class="relative">
+                                <span class="absolute left-3 top-2.5 font-bold text-slate-400">S/</span>
+                                <input type="number" step="0.01" min="0" name="saldo_inicial_caja" 
+                                       value="{{ old('saldo_inicial_caja', $empresa->saldo_inicial_caja ?? '0.00') }}" required
+                                       class="w-full pl-9 pr-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm font-black font-mono text-slate-800 focus:ring-2 focus:ring-indigo-500 focus:bg-white">
+                            </div>
+                            <span class="text-[10px] text-slate-400 mt-1 block">Monto total disponible al inicio de operaciones.</span>
+                        </div>
+
+                        <div>
+                            <label class="block font-bold text-slate-700 mb-1">Fecha de Arqueo / Acta *</label>
+                            <input type="date" name="fecha_saldo_inicial" 
+                                   value="{{ old('fecha_saldo_inicial', $empresa->fecha_saldo_inicial ? $empresa->fecha_saldo_inicial->format('Y-m-d') : date('Y-m-d')) }}" required
+                                   class="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold text-slate-800 focus:ring-2 focus:ring-indigo-500 focus:bg-white">
+                            <span class="text-[10px] text-slate-400 mt-1 block">Fecha de recepción o corte de los fondos.</span>
+                        </div>
+
+                        <div class="sm:col-span-2">
+                            <label class="block font-bold text-slate-700 mb-1">Documento de Sustento Oficial *</label>
+                            <input type="text" name="sustento_saldo_inicial" 
+                                   value="{{ old('sustento_saldo_inicial', $empresa->sustento_saldo_inicial ?? 'Acta de Entrega y Recepción de Cargo N° 001') }}" required
+                                   placeholder="Ej: Acta de Entrega de Cargo N° 01-2026 / Arqueo de Caja / Voucher Cuenta Banco Nación"
+                                   class="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold text-slate-800 focus:ring-2 focus:ring-indigo-500 focus:bg-white">
+                            <span class="text-[10px] text-slate-400 mt-1 block">Referencia legal exigida por el Consejo de Vigilancia.</span>
+                        </div>
+
+                        <div class="sm:col-span-2">
+                            <label class="block font-bold text-slate-700 mb-1">Glosa / Detalle Explicativo (Opcional)</label>
+                            <textarea name="glosa_saldo_inicial" rows="3" 
+                                      placeholder="Ej: Saldo en efectivo dejado en caja chica (S/ 500) y saldo en cuenta corriente mancomunada del Banco de la Nación (S/ 3,000) entregados por la tesorería saliente."
+                                      class="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs text-slate-800 focus:ring-2 focus:ring-indigo-500 focus:bg-white">{{ old('glosa_saldo_inicial', $empresa->glosa_saldo_inicial) }}</textarea>
+                        </div>
+                    </div>
+
+                    <div class="flex items-center justify-end pt-3 border-t border-slate-100">
+                        <button type="submit" class="px-6 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl font-bold shadow-md shadow-indigo-600/30 flex items-center gap-2 transition-all">
+                            <i class="fa-solid fa-floppy-disk"></i>
+                            Guardar y Consolidar Saldo Inicial
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- ==================== SECCIÓN 6: ASISTENTE DE NUEVO AÑO Y PROMOCIÓN ==================== -->
+    <div id="tab-content-apertura-anio" class="{{ $activeTab === 'apertura-anio' ? '' : 'hidden' }} space-y-6">
+        <!-- Banner de Apertura -->
+        <div class="bg-gradient-to-r from-indigo-900 via-indigo-800 to-purple-900 rounded-3xl p-6 text-white shadow-xl flex flex-col md:flex-row items-center justify-between gap-6">
+            <div class="space-y-2">
+                <div class="flex items-center gap-2">
+                    <span class="px-3 py-1 rounded-full text-[11px] font-black uppercase tracking-wider bg-white/20 text-indigo-100 backdrop-blur-xs">
+                        Gestión Anual Escolar
+                    </span>
+                    <span class="text-xs text-indigo-200 font-mono">Ley N° 28628 / D.S. N° 007-2006-ED</span>
+                </div>
+                <h2 class="text-xl sm:text-2xl font-black tracking-tight">
+                    Asistente de Cierre y Apertura de Nuevo Ciclo Lectivo
+                </h2>
+                <p class="text-xs text-indigo-100/80 max-w-2xl leading-relaxed">
+                    Facilita el inicio de un nuevo año escolar: promueva a los estudiantes al siguiente grado en un solo paso, archive a los egresados de 5to de secundaria y aperture el nuevo ciclo de cuotas de APAFA sin perder ningún historial.
+                </p>
+            </div>
+            <div class="text-center md:text-right flex-shrink-0 bg-white/10 backdrop-blur-md p-4 rounded-2xl border border-white/20">
+                <span class="text-[10px] uppercase font-bold text-indigo-200 block">Año Lectivo Actual</span>
+                <span class="text-3xl font-black font-mono text-white">{{ $empresa->anio_lectivo_actual ?? date('Y') }}</span>
+                <span class="text-[11px] text-indigo-200 block mt-0.5">Periodo: {{ $empresa->periodo_apafa ?? '2025 - 2026' }}</span>
+            </div>
+        </div>
+
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            <!-- Resumen Estadístico Actual -->
+            <div class="bg-white rounded-3xl p-6 border border-slate-200/90 shadow-sm space-y-4">
+                <h3 class="font-extrabold text-slate-800 text-sm flex items-center gap-2 border-b border-slate-100 pb-3">
+                    <i class="fa-solid fa-chart-pie text-indigo-600"></i> Estado Actual del Padrón Escolar
+                </h3>
+
+                @php
+                    $totalMatriculados = \App\Models\Estudiante::where('empresa_id', $empresa->id ?? 1)->where(fn($q)=>$q->whereNull('estado_matricula')->orWhere('estado_matricula','MATRICULADO'))->count();
+                    $totalEgresados = \App\Models\Estudiante::where('empresa_id', $empresa->id ?? 1)->where('estado_matricula', 'EGRESADO')->count();
+                    $totalPadresAsoc = \App\Models\PadreFamilia::where('empresa_id', $empresa->id ?? 1)->count();
+                @endphp
+
+                <div class="space-y-3 text-xs">
+                    <div class="p-3 bg-slate-50 rounded-2xl flex items-center justify-between">
+                        <span class="text-slate-600 font-semibold flex items-center gap-2">
+                            <i class="fa-solid fa-user-graduate text-indigo-600"></i> Alumnos Matriculados Activos
+                        </span>
+                        <span class="font-black text-slate-900 font-mono text-sm">{{ $totalMatriculados }}</span>
+                    </div>
+
+                    <div class="p-3 bg-slate-50 rounded-2xl flex items-center justify-between">
+                        <span class="text-slate-600 font-semibold flex items-center gap-2">
+                            <i class="fa-solid fa-award text-amber-600"></i> Alumnos Egresados (Culminaron)
+                        </span>
+                        <span class="font-black text-amber-700 font-mono text-sm">{{ $totalEgresados }}</span>
+                    </div>
+
+                    <div class="p-3 bg-slate-50 rounded-2xl flex items-center justify-between">
+                        <span class="text-slate-600 font-semibold flex items-center gap-2">
+                            <i class="fa-solid fa-users text-emerald-600"></i> Padres de Familia (Asociados)
+                        </span>
+                        <span class="font-black text-emerald-700 font-mono text-sm">{{ $totalPadresAsoc }}</span>
+                    </div>
+                </div>
+
+                <div class="p-3.5 bg-indigo-50/60 rounded-2xl border border-indigo-100 text-[11px] text-indigo-900 space-y-1">
+                    <p class="font-bold flex items-center gap-1">
+                        <i class="fa-solid fa-shield-halved text-indigo-600"></i> Garantía de Datos Históricos:
+                    </p>
+                    <p class="text-indigo-800 text-[10.5px] leading-relaxed">
+                        Los pagos de cuotas, comprobantes electrónicos (CPE), asistencias a asambleas y actas del año anterior quedan archivados con sus fechas originales para rendición de cuentas y auditoría.
+                    </p>
+                </div>
+            </div>
+
+            <!-- Formulario de Ejecución de Nuevo Año -->
+            <div class="lg:col-span-2 bg-white rounded-3xl p-6 border border-slate-200/90 shadow-sm space-y-5">
+                <div class="border-b border-slate-100 pb-3">
+                    <h3 class="font-extrabold text-slate-800 text-sm flex items-center gap-2">
+                        <i class="fa-solid fa-forward-step text-indigo-600"></i> Ejecutar Apertura del Nuevo Año Escolar
+                    </h3>
+                    <p class="text-xs text-slate-400 mt-0.5">
+                        Configure las opciones para avanzar al nuevo periodo escolar. La operación se procesa de forma segura en una sola transacción.
+                    </p>
+                </div>
+
+                <form action="{{ route('configuracion.apertura_nuevo_anio') }}" method="POST" class="space-y-4 text-xs" onsubmit="return confirm('¿Está seguro de aperturar el nuevo año escolar? Se actualizarán los grados de los alumnos según las opciones seleccionadas.')">
+                    @csrf
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                        <div>
+                            <label class="block font-bold text-slate-700 mb-1">Nuevo Año Escolar Lectivo *</label>
+                            <input type="number" name="nuevo_anio_lectivo" min="2024" max="2050" required
+                                   value="{{ old('nuevo_anio_lectivo', (int)($empresa->anio_lectivo_actual ?? date('Y')) + 1) }}"
+                                   class="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-base font-black font-mono text-indigo-600 focus:ring-2 focus:ring-indigo-500 focus:bg-white">
+                            <span class="text-[10px] text-slate-400 mt-1 block">Año escolar que iniciará actividades.</span>
+                        </div>
+
+                        <div>
+                            <label class="block font-bold text-slate-700 mb-1">Nuevo Periodo de Gestión APAFA</label>
+                            @php
+                                $nextYear = (int)($empresa->anio_lectivo_actual ?? date('Y')) + 1;
+                            @endphp
+                            <input type="text" name="nuevo_periodo_apafa" 
+                                   value="{{ old('nuevo_periodo_apafa', "{$nextYear} - " . ($nextYear + 1)) }}"
+                                   placeholder="Ej: 2027 - 2028"
+                                   class="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold text-slate-800 focus:ring-2 focus:ring-indigo-500 focus:bg-white">
+                            <span class="text-[10px] text-slate-400 mt-1 block">Periodo bienal del Consejo Directivo.</span>
+                        </div>
+                    </div>
+
+                    <!-- Opciones de Promoción de Alumnos -->
+                    <div class="p-4 bg-slate-50 rounded-2xl border border-slate-200 space-y-3">
+                        <div class="flex items-start gap-3">
+                            <input type="checkbox" name="promover_alumnos" id="chkPromoverAlumnos" value="1" checked 
+                                   class="mt-1 rounded border-slate-300 text-indigo-600 focus:ring-indigo-500">
+                            <div>
+                                <label for="chkPromoverAlumnos" class="font-bold text-slate-800 text-xs cursor-pointer select-none">
+                                    Promover automáticamente de grado a los alumnos matriculados
+                                </label>
+                                <p class="text-[11px] text-slate-500 mt-0.5 leading-relaxed">
+                                    • Alumnos de Primaria: 1ro pasa a 2do, 2do a 3ro, ..., 6to pasa a 1ro de Secundaria.<br>
+                                    • Alumnos de Secundaria: 1ro a 2do, ..., 4to a 5to.<br>
+                                    • Alumnos de <b>5to de Secundaria</b> culminan su etapa escolar y pasan a estado <b>EGRESADO</b>.<br>
+                                    • Alumnos de Inicial: 3 años a 4 años, 4 años a 5 años, 5 años a 1ro de Primaria.
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Opciones de Cuota Anual APAFA -->
+                    <div class="p-4 bg-indigo-50/50 rounded-2xl border border-indigo-100 space-y-3">
+                        <div class="flex items-start gap-3">
+                            <input type="checkbox" name="crear_cuota_apafa" id="chkCrearCuota" value="1" checked
+                                   onchange="document.getElementById('boxMontoCuota').classList.toggle('hidden', !this.checked)"
+                                   class="mt-1 rounded border-indigo-300 text-indigo-600 focus:ring-indigo-500">
+                            <div class="w-full">
+                                <label for="chkCrearCuota" class="font-bold text-indigo-950 text-xs cursor-pointer select-none">
+                                    Aperturar la Cuota Ordinaria Anual de APAFA para el nuevo año escolar
+                                </label>
+                                <p class="text-[11px] text-indigo-700 mt-0.5">
+                                    Crea el concepto en el módulo de Aportes y asigna la obligación anual a todos los asociados.
+                                </p>
+
+                                <div id="boxMontoCuota" class="pt-2 max-w-xs">
+                                    <label class="block text-[11px] font-bold text-slate-700 mb-1">Monto de la Cuota Anual (S/) *</label>
+                                    <div class="relative">
+                                        <span class="absolute left-3 top-2 font-bold text-slate-400">S/</span>
+                                        <input type="number" step="0.5" name="monto_cuota_apafa" value="50.00" min="1" max="82.50"
+                                               class="w-full pl-8 pr-3 py-1.5 bg-white border border-indigo-200 rounded-xl font-bold font-mono text-slate-800 focus:ring-2 focus:ring-indigo-500">
+                                    </div>
+                                    <span class="text-[10px] text-slate-400 mt-0.5 block">Máximo legal: S/ 80.25 (1.5% UIT).</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="flex items-center justify-end pt-3 border-t border-slate-100">
+                        <button type="submit" class="px-6 py-2.5 bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white rounded-xl font-bold shadow-md shadow-indigo-600/30 flex items-center gap-2 transition-all">
+                            <i class="fa-solid fa-play"></i>
+                            Ejecutar Cierre y Apertura del Nuevo Año
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal Editar Taller -->
+    <div id="modal-editar-taller" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center hidden p-4">
+        <div class="bg-white rounded-3xl shadow-2xl max-w-lg w-full overflow-hidden border border-slate-200">
+            <div class="p-5 bg-gradient-to-r from-slate-900 to-indigo-950 text-white flex items-center justify-between">
+                <div class="flex items-center gap-2.5">
+                    <span class="w-8 h-8 rounded-xl bg-white/10 flex items-center justify-center text-indigo-300">
+                        <i class="fa-solid fa-pen-to-square"></i>
+                    </span>
+                    <h4 class="font-black text-sm">Editar Taller Extracurricular</h4>
+                </div>
+                <button type="button" onclick="document.getElementById('modal-editar-taller').classList.add('hidden')" class="text-slate-400 hover:text-white">
+                    <i class="fa-solid fa-xmark"></i>
+                </button>
+            </div>
+
+            <form id="form-edit-taller" method="POST" class="p-5 space-y-4 text-xs">
+                @csrf
+                @method('PUT')
+
+                <div>
+                    <label class="block font-bold text-slate-700 mb-1">Nombre del Taller *</label>
+                    <input type="text" name="nombre" id="edit-taller-nombre" required class="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-indigo-500">
+                </div>
+
+                <div class="grid grid-cols-2 gap-3">
+                    <div>
+                        <label class="block font-bold text-slate-700 mb-1">Turno *</label>
+                        <select name="turno" id="edit-taller-turno" required class="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl font-bold">
+                            <option value="Tarde">Tarde (Contraturno)</option>
+                            <option value="Mañana">Mañana</option>
+                            <option value="Noche">Noche</option>
+                            <option value="Sábado">Sábado</option>
+                        </select>
+                    </div>
+
+                    <div>
+                        <label class="block font-bold text-slate-700 mb-1">Nivel *</label>
+                        <select name="nivel" id="edit-taller-nivel" required class="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl">
+                            <option value="Todos">Todos</option>
+                            <option value="Primaria">Primaria</option>
+                            <option value="Secundaria">Secundaria</option>
+                            <option value="Inicial">Inicial</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-2 gap-3">
+                    <div>
+                        <label class="block font-bold text-slate-700 mb-1">Grado *</label>
+                        <input type="text" name="grado" id="edit-taller-grado" required class="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl">
+                    </div>
+                    <div>
+                        <label class="block font-bold text-slate-700 mb-1">Sección *</label>
+                        <input type="text" name="seccion" id="edit-taller-seccion" required class="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl uppercase">
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-3 gap-2 p-3 bg-slate-50 rounded-xl border border-slate-200">
+                    <div>
+                        <label class="block font-bold text-slate-700 mb-1">Inicio</label>
+                        <input type="time" name="hora_inicio" id="edit-taller-inicio" required class="w-full text-xs font-mono font-bold px-2 py-1.5 rounded-lg border border-slate-200">
+                    </div>
+                    <div>
+                        <label class="block font-bold text-rose-600 mb-1">Tolerancia</label>
+                        <input type="time" name="hora_limite_puntual" id="edit-taller-limite" required class="w-full text-xs font-mono font-bold px-2 py-1.5 rounded-lg border border-rose-200 text-rose-700">
+                    </div>
+                    <div>
+                        <label class="block font-bold text-slate-700 mb-1">Salida</label>
+                        <input type="time" name="hora_fin" id="edit-taller-fin" required class="w-full text-xs font-mono font-bold px-2 py-1.5 rounded-lg border border-slate-200">
+                    </div>
+                </div>
+
+                <div>
+                    <label class="block font-bold text-slate-700 mb-1">Días Programados *</label>
+                    <div class="flex flex-wrap gap-2">
+                        @foreach(['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado'] as $dia)
+                            <label class="flex items-center gap-1 px-2.5 py-1 bg-slate-50 border border-slate-200 rounded-lg text-xs cursor-pointer">
+                                <input type="checkbox" name="dias_semana[]" value="{{ $dia }}" id="edit-dia-{{ $dia }}"
+                                       class="rounded border-slate-300 text-indigo-600 focus:ring-indigo-500">
+                                <span>{{ $dia }}</span>
+                            </label>
+                        @endforeach
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-2 gap-3">
+                    <div>
+                        <label class="block font-bold text-slate-700 mb-1">Docente Responsable</label>
+                        <input type="text" name="docente_responsable" id="edit-taller-docente" class="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl">
+                    </div>
+                    <div>
+                        <label class="block font-bold text-slate-700 mb-1">Lugar</label>
+                        <input type="text" name="lugar" id="edit-taller-lugar" class="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl">
+                    </div>
+                </div>
+
+                <div class="flex items-center justify-end gap-2 pt-3 border-t border-slate-100">
+                    <button type="button" onclick="document.getElementById('modal-editar-taller').classList.add('hidden')"
+                            class="px-4 py-2 border border-slate-200 text-slate-600 rounded-xl font-bold">
+                        Cancelar
+                    </button>
+                    <button type="submit" class="px-5 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl font-bold shadow-md">
+                        Guardar Cambios
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
 <script>
+    function precargarAula(nivel, grado, seccion) {
+        document.getElementById('gst-nivel').value = nivel;
+        document.getElementById('gst-grado').value = grado;
+        document.getElementById('gst-seccion').value = seccion;
+        document.getElementById('gst-grado').focus();
+    }
+
+    function abrirEditarTaller(taller) {
+        const form = document.getElementById('form-edit-taller');
+        form.action = '/configuracion/talleres/' + taller.id;
+        document.getElementById('edit-taller-nombre').value = taller.nombre || '';
+        document.getElementById('edit-taller-turno').value = taller.turno || 'Tarde';
+        document.getElementById('edit-taller-nivel').value = taller.nivel || 'Todos';
+        document.getElementById('edit-taller-grado').value = taller.grado || 'Todos';
+        document.getElementById('edit-taller-seccion').value = taller.seccion || 'Todas';
+        document.getElementById('edit-taller-inicio').value = (taller.hora_inicio || '').substring(0, 5);
+        document.getElementById('edit-taller-limite').value = (taller.hora_limite_puntual || '').substring(0, 5);
+        document.getElementById('edit-taller-fin').value = (taller.hora_fin || '').substring(0, 5);
+        document.getElementById('edit-taller-docente').value = taller.docente_responsable || '';
+        document.getElementById('edit-taller-lugar').value = taller.lugar || '';
+
+        const dias = (taller.dias_semana || '').split(',').map(d => d.trim());
+        ['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado'].forEach(d => {
+            const cb = document.getElementById('edit-dia-' + d);
+            if (cb) cb.checked = dias.includes(d);
+        });
+
+        document.getElementById('modal-editar-taller').classList.remove('hidden');
+    }
+
     function cambiarTab(tabId) {
         // Ocultar todos los contenidos
         document.getElementById('tab-content-institucion').classList.add('hidden');
         document.getElementById('tab-content-comite').classList.add('hidden');
         document.getElementById('tab-content-usuarios').classList.add('hidden');
+        const tabTurnos = document.getElementById('tab-content-turnos-talleres');
+        if (tabTurnos) tabTurnos.classList.add('hidden');
+        const tabSaldo = document.getElementById('tab-content-saldo-inicial');
+        if (tabSaldo) tabSaldo.classList.add('hidden');
+        const tabApertura = document.getElementById('tab-content-apertura-anio');
+        if (tabApertura) tabApertura.classList.add('hidden');
 
         // Resetear estilos de tabs
-        ['institucion', 'comite', 'usuarios'].forEach(t => {
+        ['institucion', 'comite', 'usuarios', 'turnos-talleres', 'saldo-inicial', 'apertura-anio'].forEach(t => {
             const btn = document.getElementById('tab-btn-' + t);
-            btn.classList.remove('border-indigo-600', 'text-indigo-600');
-            btn.classList.add('border-transparent', 'text-slate-500');
+            if (btn) {
+                btn.classList.remove('border-indigo-600', 'text-indigo-600');
+                btn.classList.add('border-transparent', 'text-slate-500');
+            }
         });
 
         // Mostrar tab seleccionado
-        document.getElementById('tab-content-' + tabId).classList.remove('hidden');
+        const targetContent = document.getElementById('tab-content-' + tabId);
+        if (targetContent) targetContent.classList.remove('hidden');
         const activeBtn = document.getElementById('tab-btn-' + tabId);
-        activeBtn.classList.remove('border-transparent', 'text-slate-500');
-        activeBtn.classList.add('border-indigo-600', 'text-indigo-600');
+        if (activeBtn) {
+            activeBtn.classList.remove('border-transparent', 'text-slate-500');
+            activeBtn.classList.add('border-indigo-600', 'text-indigo-600');
+        }
 
         // Actualizar URL sin recargar
         const url = new URL(window.location);

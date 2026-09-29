@@ -5,7 +5,6 @@ namespace App\Http\Controllers;
 use App\Models\Empresa;
 use App\Models\Estudiante;
 use App\Models\PadreFamilia;
-use Illuminate\Http\Request;
 
 class CartaPoderController extends Controller
 {

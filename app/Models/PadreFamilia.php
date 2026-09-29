@@ -10,7 +10,7 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class PadreFamilia extends Model
 {
-    use HasFactory, BelongsToTenant;
+    use BelongsToTenant, HasFactory;
 
     protected $table = 'padres_familia';
 
@@ -89,6 +89,7 @@ class PadreFamilia extends Model
         if ($this->parentesco_alternativo) {
             return $this->parentesco_alternativo;
         }
+
         return $this->tipoConsanguinidad->nombre ?? 'PADRE';
     }
 
@@ -97,6 +98,7 @@ class PadreFamilia extends Model
         if ($this->conyuge_nombres) {
             return "{$this->nombre_completo} & {$this->conyuge_nombres}";
         }
+
         return $this->nombre_completo;
     }
 
@@ -166,7 +168,7 @@ class PadreFamilia extends Model
                 }
             }
 
-            if (!$tieneHijoEnGradoContinuo) {
+            if (! $tieneHijoEnGradoContinuo) {
                 $cumple = false;
                 $errores[] = 'Incompatibilidad Legal (Art. 45 inc. e): Su hijo o todos sus pupilos cursan el último grado de la I.E. y egresarán este año.';
             }

@@ -8,7 +8,7 @@ use Illuminate\Database\Eloquent\Model;
 
 class HorarioTurno extends Model
 {
-    use HasFactory, BelongsToTenant;
+    use BelongsToTenant, HasFactory;
 
     protected $table = 'horarios_turnos';
 
@@ -64,7 +64,7 @@ class HorarioTurno extends Model
         $existentes = self::where('empresa_id', $empresaId)->get()->keyBy('turno');
 
         foreach ($defaults as $turno => $data) {
-            if (!$existentes->has($turno)) {
+            if (! $existentes->has($turno)) {
                 $creado = self::create([
                     'empresa_id' => $empresaId,
                     'turno' => $turno,

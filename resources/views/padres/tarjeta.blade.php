@@ -236,21 +236,29 @@
         .anverso-footer {
             display: flex;
             justify-content: space-between;
-            align-items: flex-end;
-            padding-top: 1.5mm;
-            border-top: 1px solid #f1f5f9;
+            align-items: center;
+            padding-top: 1.2mm;
+            border-top: 1px solid #e2e8f0;
+            margin-top: auto;
+            flex-shrink: 0;
         }
 
         .correlativo-box {
-            background: #fff1f2;
-            border: 1px solid #fecdd3;
-            color: #e11d48;
+            background: #ffe4e6;
+            border: 1.5px solid #f43f5e;
+            color: #9f1239;
             font-family: 'Share Tech Mono', monospace;
-            font-size: 7.5pt;
+            font-size: 7pt;
             font-weight: 800;
-            padding: 1.5px 6px;
+            padding: 1.5px 7px;
             border-radius: 4px;
-            letter-spacing: 0.5px;
+            letter-spacing: 0.6px;
+            line-height: 1.1;
+            display: inline-flex;
+            align-items: center;
+            gap: 3px;
+            box-shadow: 0 1px 2px rgba(244, 63, 94, 0.15);
+            white-space: nowrap;
         }
 
         .tag-apafa {
@@ -258,6 +266,10 @@
             font-weight: 800;
             color: #475569;
             text-transform: uppercase;
+            letter-spacing: 0.3px;
+            display: inline-flex;
+            align-items: center;
+            gap: 3px;
         }
 
         /* ================= CARA B: REVERSO ================= */
@@ -388,7 +400,7 @@
             <div class="anverso-header">
                 <div class="insignia-logo">
                     @if(!empty($padre->empresa->foto_institucion))
-                        <img src="{{ asset($padre->empresa->foto_institucion) }}" alt="Logo" style="max-width: 100%; max-height: 100%; object-fit: contain;">
+                        <img src="{{ asset($padre->empresa->foto_institucion) }}" alt="Logo" style="max-width: 100%; max-height: 100%; object-fit: contain;" onerror="this.parentElement.innerHTML='<i class=\'fa-solid fa-graduation-cap\'></i>';">
                     @else
                         <i class="fa-solid fa-graduation-cap"></i>
                     @endif
@@ -448,9 +460,12 @@
 
             <!-- Elemento de Control -->
             <div class="anverso-footer">
-                <span class="tag-apafa">CARNÉ DE ASOCIADO</span>
-                <div class="correlativo-box">
-                    {{ $padre->correlativo ?? 'N° 00245 - 2026' }}
+                <span class="tag-apafa">
+                    <i class="fa-solid fa-address-card" style="color: #6366f1;"></i> CARNÉ DE ASOCIADO
+                </span>
+                <div class="correlativo-box" title="Código Correlativo Oficial del Asociado">
+                    <i class="fa-solid fa-hashtag" style="font-size: 5.5pt; opacity: 0.75;"></i>
+                    <span>{{ $padre->correlativo ?? ('N° ' . str_pad($padre->id, 5, '0', STR_PAD_LEFT) . ' - ' . date('Y')) }}</span>
                 </div>
             </div>
         </div>

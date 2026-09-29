@@ -6,7 +6,6 @@ use App\Models\Estudiante;
 use App\Models\PadreFamilia;
 use App\Services\EstudianteImportService;
 use Illuminate\Http\Request;
-use Symfony\Component\HttpFoundation\StreamedResponse;
 
 class EstudianteController extends Controller
 {
@@ -20,24 +19,24 @@ class EstudianteController extends Controller
 
         $query = Estudiante::with(['padreFamilia', 'empresa'])->latest();
 
-        if (!empty($search)) {
+        if (! empty($search)) {
             $query->where(function ($q) use ($search) {
                 $q->where('dni', 'like', "%{$search}%")
-                  ->orWhere('nombres', 'like', "%{$search}%")
-                  ->orWhere('ape_pat', 'like', "%{$search}%")
-                  ->orWhere('ape_mat', 'like', "%{$search}%");
+                    ->orWhere('nombres', 'like', "%{$search}%")
+                    ->orWhere('ape_pat', 'like', "%{$search}%")
+                    ->orWhere('ape_mat', 'like', "%{$search}%");
             });
         }
 
-        if (!empty($nivel) && strtolower($nivel) !== 'todos') {
+        if (! empty($nivel) && strtolower($nivel) !== 'todos') {
             $query->whereRaw('LOWER(nivel) = ?', [strtolower($nivel)]);
         }
 
-        if (!empty($grado) && strtolower($grado) !== 'todos') {
+        if (! empty($grado) && strtolower($grado) !== 'todos') {
             $query->whereRaw('LOWER(grado) = ?', [strtolower($grado)]);
         }
 
-        if (!empty($seccion) && strtolower($seccion) !== 'todos') {
+        if (! empty($seccion) && strtolower($seccion) !== 'todos') {
             $query->whereRaw('LOWER(seccion) = ?', [strtolower($seccion)]);
         }
 
@@ -63,8 +62,20 @@ class EstudianteController extends Controller
             'sin_apoderado' => Estudiante::whereNull('padre_familia_id')->count(),
         ];
 
+        $empresaId = (int) (session('empresa_id') ?? 1);
         $estudiantes = $query->paginate(12)->withQueryString();
         $padres = PadreFamilia::select(['id', 'padre_dni', 'padre_nombres', 'padre_ape_pat', 'padre_ape_mat'])->orderBy('padre_ape_pat')->get();
+
+        $matrizTurnos = \App\Models\GradoSeccionTurno::where('empresa_id', $empresaId)
+            ->where('activo', true)
+            ->get()
+            ->mapWithKeys(function ($g) {
+                $key = mb_strtolower("{$g->nivel}_{$g->grado}_{$g->seccion}", 'UTF-8');
+
+                return [$key => $g->turno];
+            });
+
+        $empresa = \App\Models\Empresa::find($empresaId) ?? \App\Models\Empresa::first();
 
         return view('estudiantes.index', compact(
             'estudiantes',
@@ -75,7 +86,9 @@ class EstudianteController extends Controller
             'seccion',
             'apoderadoFiltro',
             'conteosNivel',
-            'conteosApoderado'
+            'conteosApoderado',
+            'matrizTurnos',
+            'empresa'
         ));
     }
 
@@ -88,7 +101,7 @@ class EstudianteController extends Controller
 
         if ($formato === 'csv') {
             $csvData = $importService->generateTemplateCsv();
-            $filename = 'Plantilla_Importacion_Estudiantes_' . date('Ymd') . '.csv';
+            $filename = 'Plantilla_Importacion_Estudiantes_'.date('Ymd').'.csv';
 
             return response($csvData, 200, [
                 'Content-Type' => 'text/csv; charset=UTF-8',
@@ -97,7 +110,7 @@ class EstudianteController extends Controller
         }
 
         $xlsxData = $importService->generateTemplateXlsx();
-        $filename = 'Plantilla_Importacion_Estudiantes_' . date('Ymd') . '.xlsx';
+        $filename = 'Plantilla_Importacion_Estudiantes_'.date('Ymd').'.xlsx';
 
         return response($xlsxData, 200, [
             'Content-Type' => 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
@@ -121,7 +134,7 @@ class EstudianteController extends Controller
 
         $file = $request->file('archivo_excel');
         $ext = strtolower($file->getClientOriginalExtension());
-        if (!in_array($ext, ['xlsx', 'xlsm', 'csv', 'txt'])) {
+        if (! in_array($ext, ['xlsx', 'xlsm', 'csv', 'txt'])) {
             return back()->with('error', 'Formato no soportado. Por favor suba un archivo en formato Excel (.xlsx) o CSV (.csv).');
         }
 
@@ -138,10 +151,10 @@ class EstudianteController extends Controller
                 return $importService->import($file, $empresaId, $defaults);
             });
         } catch (\Throwable $e) {
-            return back()->with('error', 'Ocurrió un error al procesar el archivo: ' . $e->getMessage());
+            return back()->with('error', 'Ocurrió un error al procesar el archivo: '.$e->getMessage());
         }
 
-        if ($resultado['total'] === 0 && !empty($resultado['errores'])) {
+        if ($resultado['total'] === 0 && ! empty($resultado['errores'])) {
             return back()->withErrors(['archivo_excel' => implode(' | ', $resultado['errores'])])
                 ->with('error', 'No se pudieron importar registros. Revise el formato del archivo.');
         }
@@ -150,7 +163,7 @@ class EstudianteController extends Controller
 
         $redirect = redirect()->route('estudiantes.index')->with('success', $msg);
 
-        if (!empty($resultado['errores'])) {
+        if (! empty($resultado['errores'])) {
             $redirect->with('import_warnings', $resultado['errores']);
         }
 
@@ -167,8 +180,8 @@ class EstudianteController extends Controller
             'parentesco' => 'nullable|string|max:50',
         ]);
 
-        $padreId = !empty($validated['padre_familia_id']) ? (int)$validated['padre_familia_id'] : null;
-        $parentesco = !empty($validated['parentesco']) ? mb_strtoupper(trim($validated['parentesco']), 'UTF-8') : 'HIJO(A)';
+        $padreId = ! empty($validated['padre_familia_id']) ? (int) $validated['padre_familia_id'] : null;
+        $parentesco = ! empty($validated['parentesco']) ? mb_strtoupper(trim($validated['parentesco']), 'UTF-8') : 'HIJO(A)';
 
         $estudiante->update([
             'padre_familia_id' => $padreId,
@@ -178,6 +191,7 @@ class EstudianteController extends Controller
         if ($padreId) {
             $padre = PadreFamilia::find($padreId);
             $nombrePadre = $padre ? $padre->nombre_completo : 'Apoderado';
+
             return redirect()->route('estudiantes.index')
                 ->with('success', "Se asignó con éxito a {$nombrePadre} como apoderado ({$parentesco}) del estudiante {$estudiante->nombre_completo}.");
         } else {
@@ -198,7 +212,7 @@ class EstudianteController extends Controller
             'parentesco' => 'nullable|string|max:50',
         ]);
 
-        $parentesco = !empty($validated['parentesco']) ? mb_strtoupper(trim($validated['parentesco']), 'UTF-8') : 'HIJO(A)';
+        $parentesco = ! empty($validated['parentesco']) ? mb_strtoupper(trim($validated['parentesco']), 'UTF-8') : 'HIJO(A)';
         $padre = PadreFamilia::findOrFail($validated['padre_familia_id']);
 
         $actualizados = Estudiante::whereIn('id', $validated['estudiante_ids'])
@@ -213,10 +227,17 @@ class EstudianteController extends Controller
 
     public function store(Request $request)
     {
+        $empresaId = (int) (session('empresa_id') ?? (auth()->user()->empresa_id ?? 1));
+
         $validated = $request->validate([
             'padre_familia_id' => 'nullable|exists:padres_familia,id',
             'parentesco' => 'nullable|string|max:50',
-            'dni' => 'required|digits:8',
+            'dni' => [
+                'required',
+                'digits:8',
+                \Illuminate\Validation\Rule::unique('estudiantes', 'dni')
+                    ->where('empresa_id', $empresaId),
+            ],
             'nombres' => 'required|string|max:100',
             'ape_pat' => 'required|string|max:100',
             'ape_mat' => 'nullable|string|max:100',
@@ -224,23 +245,34 @@ class EstudianteController extends Controller
             'seccion' => 'nullable|string|max:10',
             'nivel' => 'nullable|string|max:50',
             'turno' => 'nullable|string|max:50',
+        ], [
+            'dni.required' => 'El DNI del estudiante es obligatorio.',
+            'dni.digits' => 'El DNI del estudiante debe contener exactamente 8 dígitos numéricos.',
+            'dni.unique' => 'No se puede matricular: El número de DNI ingresado ya existe y se encuentra registrado a nombre de otro estudiante en esta institución.',
+            'nombres.required' => 'Los nombres del estudiante son obligatorios.',
+            'ape_pat.required' => 'El apellido paterno del estudiante es obligatorio.',
         ]);
 
         if (empty($validated['parentesco'])) {
             $validated['parentesco'] = 'HIJO(A)';
         }
 
-        $empresaId = (int) (session('empresa_id') ?? 1);
         $validated['empresa_id'] = $empresaId;
         $validated['nombres'] = mb_strtoupper($validated['nombres'], 'UTF-8');
         $validated['ape_pat'] = mb_strtoupper($validated['ape_pat'], 'UTF-8');
-        if (!empty($validated['ape_mat'])) {
+        if (! empty($validated['ape_mat'])) {
             $validated['ape_mat'] = mb_strtoupper($validated['ape_mat'], 'UTF-8');
+        }
+
+        if (empty($validated['turno']) && ! empty($validated['nivel']) && ! empty($validated['grado']) && ! empty($validated['seccion'])) {
+            $validated['turno'] = \App\Models\GradoSeccionTurno::obtenerTurnoPredeterminado($empresaId, $validated['nivel'], $validated['grado'], $validated['seccion']);
+        } elseif (empty($validated['turno'])) {
+            $validated['turno'] = 'Mañana';
         }
 
         $estudiante = Estudiante::create($validated);
 
-        if (!empty($estudiante->padre_familia_id)) {
+        if (! empty($estudiante->padre_familia_id)) {
             return redirect()->route('padres.tarjeta', $estudiante->padre_familia_id)
                 ->with('success', "¡Estudiante ({$estudiante->parentesco}) matriculado con éxito! Tarjeta de APAFA actualizada del Asociado.");
         }
@@ -254,13 +286,13 @@ class EstudianteController extends Controller
      */
     public function update(Request $request, Estudiante $estudiante)
     {
-        $empresaId = (int) (session('empresa_id') ?? 1);
+        $empresaId = (int) (session('empresa_id') ?? (auth()->user()->empresa_id ?? 1));
 
         $validated = $request->validate([
             'dni' => [
                 'required',
                 'digits:8',
-                \Illuminate\Validation\Rule::unique('estudiantes')
+                \Illuminate\Validation\Rule::unique('estudiantes', 'dni')
                     ->where('empresa_id', $empresaId)
                     ->ignore($estudiante->id),
             ],
@@ -276,16 +308,16 @@ class EstudianteController extends Controller
         ], [
             'dni.required' => 'El DNI del estudiante es obligatorio.',
             'dni.digits' => 'El DNI debe contener exactamente 8 dígitos numéricos.',
-            'dni.unique' => 'Ya existe otro estudiante registrado con ese mismo DNI en esta institución.',
+            'dni.unique' => 'No se puede actualizar: El número de DNI ingresado ya existe y pertenece a otro estudiante en esta institución.',
             'nombres.required' => 'Los nombres del estudiante son obligatorios.',
             'ape_pat.required' => 'El apellido paterno es obligatorio.',
         ]);
 
         $validated['nombres'] = mb_strtoupper($validated['nombres'], 'UTF-8');
         $validated['ape_pat'] = mb_strtoupper($validated['ape_pat'], 'UTF-8');
-        $validated['ape_mat'] = !empty($validated['ape_mat']) ? mb_strtoupper($validated['ape_mat'], 'UTF-8') : null;
+        $validated['ape_mat'] = ! empty($validated['ape_mat']) ? mb_strtoupper($validated['ape_mat'], 'UTF-8') : null;
         $validated['seccion'] = mb_strtoupper($validated['seccion'], 'UTF-8');
-        $validated['parentesco'] = !empty($validated['parentesco']) ? mb_strtoupper(trim($validated['parentesco']), 'UTF-8') : 'HIJO(A)';
+        $validated['parentesco'] = ! empty($validated['parentesco']) ? mb_strtoupper(trim($validated['parentesco']), 'UTF-8') : 'HIJO(A)';
 
         $estudiante->update($validated);
 
@@ -296,13 +328,61 @@ class EstudianteController extends Controller
     public function tarjeta(Estudiante $estudiante)
     {
         $estudiante->load(['padreFamilia', 'empresa']);
+
         return view('estudiantes.tarjeta', compact('estudiante'));
+    }
+
+    /**
+     * Verifica en tiempo real si un número de DNI de estudiante ya existe en la institución.
+     */
+    public function verificarDni(Request $request)
+    {
+        $empresaId = (int) (session('empresa_id') ?? (auth()->user()->empresa_id ?? 1));
+        $dni = preg_replace('/\D/', '', (string) $request->query('dni', ''));
+        $ignoreId = $request->query('ignore_id');
+
+        if (strlen($dni) !== 8) {
+            return response()->json([
+                'valido' => false,
+                'existe' => false,
+                'mensaje' => 'El DNI del estudiante debe tener exactamente 8 dígitos numéricos.',
+            ]);
+        }
+
+        $query = Estudiante::where('empresa_id', $empresaId)->where('dni', $dni);
+        if ($ignoreId) {
+            $query->where('id', '!=', (int) $ignoreId);
+        }
+        $estudiante = $query->first();
+
+        if ($estudiante) {
+            $aula = "{$estudiante->grado} '{$estudiante->seccion}' - {$estudiante->nivel}";
+
+            return response()->json([
+                'valido' => true,
+                'existe' => true,
+                'estudiante' => [
+                    'id' => $estudiante->id,
+                    'dni' => $estudiante->dni,
+                    'nombre_completo' => $estudiante->nombre_completo,
+                    'aula' => $aula,
+                ],
+                'mensaje' => "No se puede matricular: El DNI {$dni} ya se encuentra registrado a nombre del alumno '{$estudiante->nombre_completo}' ({$aula}) en esta institución.",
+            ]);
+        }
+
+        return response()->json([
+            'valido' => true,
+            'existe' => false,
+            'mensaje' => 'DNI disponible para matrícula.',
+        ]);
     }
 
     public function destroy(Estudiante $estudiante)
     {
         $nombre = $estudiante->nombre_completo;
         $estudiante->delete();
+
         return redirect()->route('estudiantes.index')->with('success', "Estudiante '{$nombre}' eliminado con éxito.");
     }
 }

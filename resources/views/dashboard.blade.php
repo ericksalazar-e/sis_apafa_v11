@@ -144,9 +144,10 @@
                             <td class="px-5 py-3.5 text-slate-600">{{ $pago->pago_concepto }}</td>
                             <td class="px-5 py-3.5 font-extrabold text-emerald-600">S/ {{ number_format($pago->monto_pago, 2) }}</td>
                             <td class="px-5 py-3.5">
-                                <span class="inline-flex items-center px-2 py-0.5 rounded font-mono text-[11px] font-bold bg-slate-100 text-slate-700 border border-slate-200">
+                                <a href="{{ route('pagos.ticket', $pago) }}" target="_blank" title="Ver e imprimir ticket" class="inline-flex items-center px-2 py-0.5 rounded font-mono text-[11px] font-bold bg-slate-100 hover:bg-indigo-50 hover:text-indigo-700 hover:border-indigo-200 text-slate-700 border border-slate-200 transition-colors">
                                     {{ $pago->serie }}-{{ $pago->numero }}
-                                </span>
+                                    <i class="fa-solid fa-arrow-up-right-from-square ml-1 text-[9px] opacity-60"></i>
+                                </a>
                             </td>
                             <td class="px-5 py-3.5">
                                 @if($pago->estado_facturacion === 'EMITIDO')

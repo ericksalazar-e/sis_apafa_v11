@@ -2,6 +2,7 @@
 
 namespace Tests\Feature;
 
+use App\Models\CandidatoElectoral;
 use App\Models\Cargo;
 use App\Models\ComicioElectoral;
 use App\Models\ConcesionQuiosco;
@@ -10,6 +11,7 @@ use App\Models\Empresa;
 use App\Models\Estudiante;
 use App\Models\Faena;
 use App\Models\FaenaAsistencia;
+use App\Models\ListaElectoral;
 use App\Models\MovimientoDirectiva;
 use App\Models\PadreFamilia;
 use App\Models\Pago;
@@ -17,16 +19,19 @@ use App\Models\PagoQuiosco;
 use App\Models\Quiosco;
 use App\Models\User;
 use App\Models\VotoPadron;
-use App\Models\ListaElectoral;
-use App\Models\CandidatoElectoral;
-use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Foundation\Testing\DatabaseTransactions;
 use Tests\TestCase;
 
 class MineduDecretoSupremo007Test extends TestCase
 {
+    use DatabaseTransactions;
+
     private Empresa $empresa;
+
     private User $admin;
+
     private PadreFamilia $padre;
+
     private Estudiante $estudiante;
 
     protected function setUp(): void
@@ -82,7 +87,7 @@ class MineduDecretoSupremo007Test extends TestCase
         $this->actingAs($this->admin);
 
         // 1. Crear faena
-        $tituloFaena = 'Faena Comunal ' . uniqid();
+        $tituloFaena = 'Faena Comunal '.uniqid();
         $response = $this->post(route('faenas.store'), [
             'titulo' => $tituloFaena,
             'fecha_faena' => '2026-10-10',
@@ -152,8 +157,8 @@ class MineduDecretoSupremo007Test extends TestCase
         $padronResponse->assertSee($this->padre->dni);
 
         // Limpieza de datos de prueba
-        \App\Models\Pago::withoutGlobalScopes()->where('faena_id', $faena->id)->delete();
-        \App\Models\FaenaAsistencia::where('faena_id', $faena->id)->delete();
+        Pago::withoutGlobalScopes()->where('faena_id', $faena->id)->delete();
+        FaenaAsistencia::where('faena_id', $faena->id)->delete();
         $faena->delete();
     }
 
@@ -185,7 +190,7 @@ class MineduDecretoSupremo007Test extends TestCase
         ]);
 
         // Limpieza de pago fraccionado de prueba
-        \App\Models\Pago::withoutGlobalScopes()
+        Pago::withoutGlobalScopes()
             ->where('padre_familia_id', $this->padre->id)
             ->where('modalidad', 'FRACCIONADO')
             ->where('pago_concepto', 'CUOTA ORDINARIA FRACCIONADA 2026')
@@ -267,8 +272,8 @@ class MineduDecretoSupremo007Test extends TestCase
         // 6. Registro de Lista de Candidatos a la Directiva de APAFA (Ley 28628)
         // Limpiar listas de prueba previas para evitar acumulación de duplicados
         $numLista = rand(100, 999);
-        $nombreListaTest = 'LISTA TEST ' . $numLista;
-        
+        $nombreListaTest = 'LISTA TEST '.$numLista;
+
         // Eliminar listas de test anteriores en este comicio
         ListaElectoral::where('comicio_id', $comicio->id)
             ->where('nombre_lista', 'LIKE', 'LISTA TEST%')
@@ -309,7 +314,7 @@ class MineduDecretoSupremo007Test extends TestCase
         $djResp->assertSee('Grado del Estudiante');
 
         // 9. Bloqueo Legal: Padre sin hijos matriculados
-        $dniSinHijo = 'SN' . rand(10000, 99999);
+        $dniSinHijo = 'SN'.rand(10000, 99999);
         $padreSinHijo = PadreFamilia::create([
             'padre_dni' => $dniSinHijo,
             'padre_ape_pat' => 'QUISPE',
@@ -326,7 +331,7 @@ class MineduDecretoSupremo007Test extends TestCase
         $padreSinHijo->delete();
 
         // 10. Bloqueo Legal: Hijo en último grado (5to de Secundaria)
-        $dniUltimo = 'UL' . rand(10000, 99999);
+        $dniUltimo = 'UL'.rand(10000, 99999);
         $padreUltimoGrado = PadreFamilia::create([
             'padre_dni' => $dniUltimo,
             'padre_ape_pat' => 'LOPEZ',
@@ -337,7 +342,7 @@ class MineduDecretoSupremo007Test extends TestCase
         $estudianteUltimo = Estudiante::create([
             'empresa_id' => 1,
             'padre_familia_id' => $padreUltimoGrado->id,
-            'dni' => 'E' . rand(10000, 99999),
+            'dni' => 'E'.rand(10000, 99999),
             'nombres' => 'SEBASTIAN',
             'ape_pat' => 'LOPEZ',
             'ape_mat' => 'SOTO',
@@ -391,7 +396,7 @@ class MineduDecretoSupremo007Test extends TestCase
             ['nombre' => 'Quiosco Test Adjudicación'],
             ['ubicacion' => 'Pabellón de Prueba', 'estado' => 'DISPONIBLE', 'empresa_id' => 1]
         );
-        PagoQuiosco::whereHas('concesion', fn($q) => $q->where('quiosco_id', $quiosco->id))->delete();
+        PagoQuiosco::whereHas('concesion', fn ($q) => $q->where('quiosco_id', $quiosco->id))->delete();
         ConcesionQuiosco::where('quiosco_id', $quiosco->id)->delete();
 
         // 2. Registrar Concesión
@@ -543,7 +548,7 @@ class MineduDecretoSupremo007Test extends TestCase
         $this->actingAs($this->admin);
 
         // Limpiar registro previo si existe para evitar duplicado
-        \App\Models\MovimientoDirectiva::where('directivo_saliente_dni', '12345678')->delete();
+        MovimientoDirectiva::where('directivo_saliente_dni', '12345678')->delete();
 
         // Registrar Vacancia y Asunción
         $movResp = $this->post(route('configuracion.movimientos.store'), [
@@ -571,7 +576,7 @@ class MineduDecretoSupremo007Test extends TestCase
         $credResp->assertSee('GLORIA PAREDES RÍOS');
 
         // Limpiar para mantener la BD limpia
-        \App\Models\MovimientoDirectiva::where('directivo_saliente_dni', '12345678')->delete();
+        MovimientoDirectiva::where('directivo_saliente_dni', '12345678')->delete();
     }
 
     /**
@@ -740,4 +745,3 @@ class MineduDecretoSupremo007Test extends TestCase
         $padreEntrante->delete();
     }
 }
-

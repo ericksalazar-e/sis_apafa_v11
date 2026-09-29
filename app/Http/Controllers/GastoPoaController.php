@@ -12,8 +12,14 @@ class GastoPoaController extends Controller
     {
         $gastos = GastoPoa::with('user')->latest('fecha')->paginate(12);
 
+        $empresaId = (int) (session('empresa_id') ?? (auth()->user()->empresa_id ?? 1));
+        $empresa = \App\Models\Empresa::find($empresaId) ?? \App\Models\Empresa::first();
+        $saldoInicialCaja = (float) ($empresa->saldo_inicial_caja ?? 0.00);
+
         // Indicadores Financieros de Transparencia
-        $totalRecaudado = (float) Pago::sum('monto_pago');
+        $totalRecaudadoCuotas = (float) Pago::sum('monto_pago');
+        $totalRecaudadoQuioscos = (float) \App\Models\PagoQuiosco::sum('monto');
+        $totalRecaudado = $saldoInicialCaja + $totalRecaudadoCuotas + $totalRecaudadoQuioscos;
         $totalGastos = (float) GastoPoa::sum('monto');
         $saldoDisponible = $totalRecaudado - $totalGastos;
 
@@ -28,7 +34,10 @@ class GastoPoaController extends Controller
 
         return view('gastos_poa.index', compact(
             'gastos',
+            'saldoInicialCaja',
             'totalRecaudado',
+            'totalRecaudadoCuotas',
+            'totalRecaudadoQuioscos',
             'totalGastos',
             'saldoDisponible',
             'porCategoria'
@@ -50,9 +59,9 @@ class GastoPoaController extends Controller
 
         if ($request->hasFile('comprobante_file')) {
             $file = $request->file('comprobante_file');
-            $filename = 'comprobante_' . time() . '_' . uniqid() . '.' . $file->getClientOriginalExtension();
+            $filename = 'comprobante_'.time().'_'.uniqid().'.'.$file->getClientOriginalExtension();
             $file->move(public_path('uploads/comprobantes_poa'), $filename);
-            $validated['foto_comprobante'] = 'uploads/comprobantes_poa/' . $filename;
+            $validated['foto_comprobante'] = 'uploads/comprobantes_poa/'.$filename;
         }
 
         $validated['user_id'] = auth()->id();
@@ -68,6 +77,7 @@ class GastoPoaController extends Controller
     public function destroy(GastoPoa $gasto)
     {
         $gasto->delete();
+
         return redirect()->route('gastos_poa.index')->with('success', 'Gasto del POA eliminado correctamente.');
     }
 }

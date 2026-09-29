@@ -10,7 +10,7 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class Estudiante extends Model
 {
-    use HasFactory, BelongsToTenant;
+    use BelongsToTenant, HasFactory;
 
     protected $table = 'estudiantes';
 
@@ -26,6 +26,7 @@ class Estudiante extends Model
         'seccion',
         'nivel',
         'turno',
+        'estado_matricula',
         'correlativo',
     ];
 
@@ -60,5 +61,32 @@ class Estudiante extends Model
     public function asistencias(): HasMany
     {
         return $this->hasMany(AsistenciaEstudiante::class);
+    }
+
+    /**
+     * Retorna los talleres extracurriculares que corresponden al nivel, grado y sección del estudiante.
+     */
+    public function talleres()
+    {
+        $nivel = strtolower(trim($this->nivel ?? ''));
+        $grado = strtolower(trim($this->grado ?? ''));
+        $seccion = strtolower(trim($this->seccion ?? ''));
+
+        return Taller::where('empresa_id', $this->empresa_id)
+            ->where('activo', true)
+            ->where(function ($q) use ($nivel) {
+                $q->where('nivel', 'Todos')
+                    ->orWhereRaw('LOWER(nivel) = ?', [$nivel]);
+            })
+            ->where(function ($q) use ($grado) {
+                $q->where('grado', 'Todos')
+                    ->orWhereRaw('LOWER(grado) = ?', [$grado]);
+            })
+            ->where(function ($q) use ($seccion) {
+                $q->where('seccion', 'Todas')
+                    ->orWhere('seccion', 'Todos')
+                    ->orWhereRaw('LOWER(seccion) = ?', [$seccion]);
+            })
+            ->get();
     }
 }

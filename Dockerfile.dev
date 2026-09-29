@@ -1,0 +1,50 @@
+FROM php:8.2-fpm-alpine
+
+# Dependencias del sistema y librerías nativas
+RUN apk add --no-cache \
+    curl \
+    libpng-dev \
+    libjpeg-turbo-dev \
+    freetype-dev \
+    libzip-dev \
+    zip \
+    unzip \
+    mysql-client \
+    oniguruma-dev \
+    icu-dev \
+    linux-headers \
+    git \
+    bash
+
+# Compilar e instalar extensiones de PHP requeridas por Laravel
+RUN docker-php-ext-configure gd --with-freetype --with-jpeg \
+    && docker-php-ext-install -j$(nproc) \
+        pdo_mysql \
+        mbstring \
+        zip \
+        exif \
+        pcntl \
+        bcmath \
+        gd \
+        intl
+
+# Instalar extensión Redis para colas y sesiones
+RUN apk add --no-cache --virtual .build-deps $PHPIZE_DEPS \
+    && pecl install redis \
+    && docker-php-ext-enable redis \
+    && apk del .build-deps
+
+# Composer oficial
+COPY --from=composer:2 /usr/bin/composer /usr/bin/composer
+
+# Ajustes de PHP para entorno de desarrollo
+RUN echo "upload_max_filesize=64M" > /usr/local/etc/php/conf.d/dev-settings.ini \
+    && echo "post_max_size=64M" >> /usr/local/etc/php/conf.d/dev-settings.ini \
+    && echo "memory_limit=512M" >> /usr/local/etc/php/conf.d/dev-settings.ini \
+    && echo "max_execution_time=300" >> /usr/local/etc/php/conf.d/dev-settings.ini
+
+WORKDIR /var/www/html
+
+EXPOSE 9000
+
+CMD ["php-fpm"]

@@ -10,6 +10,7 @@ use App\Http\Controllers\EleccionController;
 use App\Http\Controllers\EstudianteController;
 use App\Http\Controllers\FaenaController;
 use App\Http\Controllers\GastoPoaController;
+use App\Http\Controllers\HealthCheckController;
 use App\Http\Controllers\LandingController;
 use App\Http\Controllers\PadreFamiliaController;
 use App\Http\Controllers\PagoController;
@@ -19,13 +20,22 @@ use App\Http\Controllers\VigilanciaController;
 use App\Models\Empresa;
 use Illuminate\Support\Facades\Route;
 
+// Health Check Endpoints para Alta Disponibilidad (Load Balancer / Kubernetes / AWS ALB)
+Route::get('/healthz', [HealthCheckController::class, 'check'])->name('healthz');
+Route::get('/api/health', [HealthCheckController::class, 'check'])->name('api.health');
+
 // Rutas de Invitados / Autenticación
 Route::get('/login', [AuthController::class, 'showLogin'])->name('login');
-Route::post('/login', [AuthController::class, 'login'])->name('login.post');
+Route::post('/login', [AuthController::class, 'login'])->middleware('throttle:login')->name('login.post');
 Route::get('/login/quick/{rol}', [AuthController::class, 'quickLogin'])->name('login.quick');
 
-// Portal Público y Landing Page para Padres de Familia
+// Portal Público, Landing Page y Manual Interactivo de Usuario
 Route::get('/', [LandingController::class, 'index'])->name('home');
+Route::get('/manual', function () {
+    $empresa = Empresa::find(session('empresa_id', 1)) ?? Empresa::first();
+
+    return view('manual', compact('empresa'));
+})->name('manual');
 Route::get('/consulta', [LandingController::class, 'index'])->name('consulta.padre');
 Route::get('/pagos/{pago}/ticket-publico', [LandingController::class, 'ticketPago'])->name('pagos.ticket_publico');
 Route::get('/validar-poder/{codigo}', [CartaPoderController::class, 'validarPublico'])->name('carta_poder.validar');
@@ -51,6 +61,9 @@ Route::middleware(['auth'])->group(function () {
     Route::get('/padres/{padre}/tarjeta', [PadreFamiliaController::class, 'tarjeta'])
         ->middleware('role:ADMIN,SECRETARIO,COMITE_VIGILANCIA')
         ->name('padres.tarjeta');
+    Route::get('/padres/verificar-dni', [PadreFamiliaController::class, 'verificarDni'])
+        ->middleware('role:ADMIN,SECRETARIO,COMITE_VIGILANCIA')
+        ->name('padres.verificar_dni');
     Route::delete('/padres/{padre}', [PadreFamiliaController::class, 'destroy'])
         ->middleware('role:ADMIN,SECRETARIO')
         ->name('padres.destroy');
@@ -80,6 +93,9 @@ Route::middleware(['auth'])->group(function () {
     Route::get('/estudiantes/{estudiante}/tarjeta', [EstudianteController::class, 'tarjeta'])
         ->middleware('role:ADMIN,SECRETARIO,DIRECTOR,COMITE_VIGILANCIA,VOCAL_OPERADOR')
         ->name('estudiantes.tarjeta');
+    Route::get('/estudiantes/verificar-dni', [EstudianteController::class, 'verificarDni'])
+        ->middleware('role:ADMIN,SECRETARIO,DIRECTOR,COMITE_VIGILANCIA,TESORERO')
+        ->name('estudiantes.verificar_dni');
     Route::delete('/estudiantes/{estudiante}', [EstudianteController::class, 'destroy'])
         ->middleware('role:ADMIN,SECRETARIO')
         ->name('estudiantes.destroy');
@@ -139,40 +155,95 @@ Route::middleware(['auth'])->group(function () {
     Route::post('/pagos', [PagoController::class, 'store'])
         ->middleware('role:ADMIN,TESORERO')
         ->name('pagos.store');
+    Route::get('/pagos/buscar-asociado', [PagoController::class, 'buscarAsociado'])
+        ->middleware(['role:ADMIN,TESORERO,COMITE_VIGILANCIA', 'throttle:pos-scan'])
+        ->name('pagos.buscar_asociado');
     Route::get('/pagos/{pago}/ticket', [PagoController::class, 'ticket'])
         ->middleware('role:ADMIN,TESORERO,COMITE_VIGILANCIA')
         ->name('pagos.ticket');
 
+    // 5.1 Microservicio de Facturación Electrónica CPE (SUNAT UBL 2.1)
+    Route::get('/facturacion-service', [App\Http\Controllers\FacturacionServiceController::class, 'index'])
+        ->middleware('role:ADMIN,TESORERO,COMITE_VIGILANCIA')
+        ->name('facturacion.index');
+    Route::post('/facturacion-service/configuracion', [App\Http\Controllers\FacturacionServiceController::class, 'guardarConfiguracion'])
+        ->middleware('role:ADMIN,TESORERO')
+        ->name('facturacion.config.update');
+    Route::post('/facturacion-service/test', [App\Http\Controllers\FacturacionServiceController::class, 'testCpe'])
+        ->middleware('role:ADMIN,TESORERO')
+        ->name('facturacion.test');
+    Route::post('/facturacion-service/procesar-cola', [App\Http\Controllers\FacturacionServiceController::class, 'procesarCola'])
+        ->middleware('role:ADMIN,TESORERO')
+        ->name('facturacion.procesar_cola');
+    Route::post('/facturacion-service/reintentar/{pago}', [App\Http\Controllers\FacturacionServiceController::class, 'reintentar'])
+        ->middleware('role:ADMIN,TESORERO')
+        ->name('facturacion.reintentar');
+    Route::get('/facturacion-service/xml/{pago}', [App\Http\Controllers\FacturacionServiceController::class, 'verXml'])
+        ->middleware('role:ADMIN,TESORERO,COMITE_VIGILANCIA')
+        ->name('facturacion.xml');
+
     // 6. Rendición de Cuentas y Ejecución Presupuestal del POA (Ley 28628)
-    Route::get('/gastos-poa', [\App\Http\Controllers\GastoPoaController::class, 'index'])
+    Route::get('/gastos-poa', [GastoPoaController::class, 'index'])
         ->middleware('role:ADMIN,TESORERO,COMITE_VIGILANCIA')
         ->name('gastos_poa.index');
-    Route::post('/gastos-poa', [\App\Http\Controllers\GastoPoaController::class, 'store'])
+    Route::post('/gastos-poa', [GastoPoaController::class, 'store'])
         ->middleware('role:ADMIN,TESORERO')
         ->name('gastos_poa.store');
-    Route::delete('/gastos-poa/{gasto}', [\App\Http\Controllers\GastoPoaController::class, 'destroy'])
+    Route::delete('/gastos-poa/{gasto}', [GastoPoaController::class, 'destroy'])
         ->middleware('role:ADMIN,TESORERO')
         ->name('gastos_poa.destroy');
 
     // 7. Configuración Institucional, Logo, Comité de APAFA y Gestión de Usuarios/Credenciales
-    Route::get('/configuracion', [\App\Http\Controllers\ConfiguracionController::class, 'index'])
+    Route::get('/configuracion', [ConfiguracionController::class, 'index'])
         ->middleware('role:ADMIN,SECRETARIO,COMITE_VIGILANCIA')
         ->name('configuracion.index');
-    Route::post('/configuracion/institucion', [\App\Http\Controllers\ConfiguracionController::class, 'updateInstitucion'])
+    Route::post('/configuracion/institucion', [ConfiguracionController::class, 'updateInstitucion'])
         ->middleware('role:ADMIN,SECRETARIO')
         ->name('configuracion.institucion.update');
-    Route::post('/configuracion/comite', [\App\Http\Controllers\ConfiguracionController::class, 'asignarCargoComite'])
+    Route::post('/configuracion/comite', [ConfiguracionController::class, 'asignarCargoComite'])
         ->middleware('role:ADMIN,SECRETARIO')
         ->name('configuracion.comite.store');
-    Route::post('/configuracion/usuarios', [\App\Http\Controllers\ConfiguracionController::class, 'storeUsuario'])
+    Route::post('/configuracion/usuarios', [ConfiguracionController::class, 'storeUsuario'])
         ->middleware('role:ADMIN')
         ->name('configuracion.usuarios.store');
-    Route::put('/configuracion/usuarios/{usuario}', [\App\Http\Controllers\ConfiguracionController::class, 'updateUsuario'])
+    Route::put('/configuracion/usuarios/{usuario}', [ConfiguracionController::class, 'updateUsuario'])
         ->middleware('role:ADMIN')
         ->name('configuracion.usuarios.update');
-    Route::delete('/configuracion/usuarios/{usuario}', [\App\Http\Controllers\ConfiguracionController::class, 'destroyUsuario'])
+    Route::delete('/configuracion/usuarios/{usuario}', [ConfiguracionController::class, 'destroyUsuario'])
         ->middleware('role:ADMIN')
         ->name('configuracion.usuarios.destroy');
+
+    // Configuración de Turnos por Grado/Sección y Talleres Extracurriculares
+    Route::post('/configuracion/grados-turnos', [ConfiguracionController::class, 'storeGradoSeccionTurno'])
+        ->middleware('role:ADMIN,SECRETARIO')
+        ->name('configuracion.grados_turnos.store');
+    Route::delete('/configuracion/grados-turnos/{id}', [ConfiguracionController::class, 'destroyGradoSeccionTurno'])
+        ->middleware('role:ADMIN,SECRETARIO')
+        ->name('configuracion.grados_turnos.destroy');
+    Route::post('/configuracion/grados-turnos/sincronizar', [ConfiguracionController::class, 'sincronizarTurnosMasivo'])
+        ->middleware('role:ADMIN,SECRETARIO')
+        ->name('configuracion.grados_turnos.sincronizar');
+
+    Route::post('/configuracion/talleres', [ConfiguracionController::class, 'storeTaller'])
+        ->middleware('role:ADMIN,SECRETARIO')
+        ->name('configuracion.talleres.store');
+
+    // Fondo de Apertura / Saldo Inicial de Caja y Asistente de Nuevo Año Escolar
+    Route::post('/configuracion/saldo-inicial', [ConfiguracionController::class, 'updateSaldoInicial'])
+        ->middleware('role:ADMIN,TESORERO')
+        ->name('configuracion.saldo_inicial.update');
+    Route::post('/configuracion/apertura-nuevo-anio', [ConfiguracionController::class, 'aperturaNuevoAnio'])
+        ->middleware('role:ADMIN,SECRETARIO')
+        ->name('configuracion.apertura_nuevo_anio');
+    Route::post('/estudiantes/promocion-masiva', [ConfiguracionController::class, 'aperturaNuevoAnio'])
+        ->middleware('role:ADMIN,SECRETARIO')
+        ->name('estudiantes.promocion_masiva');
+    Route::put('/configuracion/talleres/{id}', [ConfiguracionController::class, 'updateTaller'])
+        ->middleware('role:ADMIN,SECRETARIO')
+        ->name('configuracion.talleres.update');
+    Route::delete('/configuracion/talleres/{id}', [ConfiguracionController::class, 'destroyTaller'])
+        ->middleware('role:ADMIN,SECRETARIO')
+        ->name('configuracion.talleres.destroy');
 
     // 9. Faenas Escolares y Compensaciones (D.S. N.º 007-2026-MINEDU)
     Route::get('/faenas', [FaenaController::class, 'index'])
@@ -222,7 +293,6 @@ Route::middleware(['auth'])->group(function () {
     Route::post('/elecciones/{comicio}/comite-electoral', [EleccionController::class, 'updateComiteElectoral'])
         ->middleware('role:ADMIN,SECRETARIO')
         ->name('elecciones.comite_electoral');
-
 
     // Gestión de Listas de Candidatos y Cédula de Sufragio (Ley N° 28628)
     Route::post('/elecciones/{comicio}/listas', [EleccionController::class, 'storeLista'])
@@ -291,6 +361,7 @@ Route::middleware(['auth'])->group(function () {
         if (Empresa::where('id', $id)->exists()) {
             session(['empresa_id' => (int) $id]);
         }
+
         return back()->with('success', 'Empresa / Institución cambiada correctamente.');
     })->name('tenant.switch');
 

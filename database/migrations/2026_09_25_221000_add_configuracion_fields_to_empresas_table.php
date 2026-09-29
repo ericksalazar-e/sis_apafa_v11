@@ -12,19 +12,19 @@ return new class extends Migration
     public function up(): void
     {
         Schema::table('empresas', function (Blueprint $table) {
-            if (!Schema::hasColumn('empresas', 'ruc')) {
+            if (! Schema::hasColumn('empresas', 'ruc')) {
                 $table->string('ruc', 11)->nullable()->after('cod_modular');
             }
-            if (!Schema::hasColumn('empresas', 'periodo_apafa')) {
+            if (! Schema::hasColumn('empresas', 'periodo_apafa')) {
                 $table->string('periodo_apafa', 50)->nullable()->default('2025 - 2026')->after('correo');
             }
-            if (!Schema::hasColumn('empresas', 'lema')) {
+            if (! Schema::hasColumn('empresas', 'lema')) {
                 $table->string('lema', 255)->nullable()->after('periodo_apafa');
             }
-            if (!Schema::hasColumn('empresas', 'nivel_educativo')) {
+            if (! Schema::hasColumn('empresas', 'nivel_educativo')) {
                 $table->string('nivel_educativo', 100)->nullable()->default('Inicial, Primaria y Secundaria')->after('lema');
             }
-            if (!Schema::hasColumn('empresas', 'director_nombre')) {
+            if (! Schema::hasColumn('empresas', 'director_nombre')) {
                 $table->string('director_nombre', 150)->nullable()->after('nivel_educativo');
             }
         });

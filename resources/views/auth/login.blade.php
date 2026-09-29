@@ -4,6 +4,20 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Acceso al Sistema - SIS-APAFA</title>
+
+    <!-- Favicon del Navegador (Logo Dinámico Institucional) -->
+    @php
+        $favLogin = \App\Models\Empresa::find(session('empresa_id') ?? 1)?->foto_institucion 
+            ?? \App\Models\Empresa::first()?->foto_institucion 
+            ?? 'favicon.png';
+        $favVerL = file_exists(public_path($favLogin)) ? filemtime(public_path($favLogin)) : time();
+    @endphp
+    <link rel="icon" type="image/png" sizes="32x32" href="{{ asset('favicon-32x32.png') }}?v={{ $favVerL }}">
+    <link rel="icon" type="image/png" sizes="16x16" href="{{ asset('favicon-16x16.png') }}?v={{ $favVerL }}">
+    <link rel="icon" type="image/x-icon" href="{{ asset('favicon.ico') }}?v={{ $favVerL }}">
+    <link rel="shortcut icon" href="{{ asset('favicon.ico') }}?v={{ $favVerL }}">
+    <link rel="apple-touch-icon" sizes="180x180" href="{{ asset('apple-touch-icon.png') }}?v={{ $favVerL }}">
+
     <!-- Tailwind CSS CDN -->
     <script src="https://cdn.tailwindcss.com"></script>
     <!-- Google Fonts -->
@@ -252,8 +266,16 @@
 
         </div>
 
+        <!-- Enlace al Manual de Usuario -->
+        <div class="mt-4 text-center">
+            <a href="{{ route('manual') }}" target="_blank" class="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-slate-900/90 border border-slate-800 text-xs font-bold text-indigo-400 hover:text-indigo-300 hover:border-indigo-500/50 transition-all shadow-inner">
+                <i class="fa-solid fa-book-open-reader text-indigo-400"></i>
+                <span>¿Primera vez aquí? Ver Manual de Usuario</span>
+            </a>
+        </div>
+
         <!-- Footer -->
-        <p class="text-center text-xs text-slate-600 mt-6">
+        <p class="text-center text-xs text-slate-600 mt-4">
             Conforme a la Ley General de APAFA N° 28628 y D.S. N° 004-2006-ED.
         </p>
     </div>

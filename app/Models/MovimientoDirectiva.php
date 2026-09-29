@@ -8,7 +8,7 @@ use Illuminate\Database\Eloquent\Model;
 
 class MovimientoDirectiva extends Model
 {
-    use HasFactory, BelongsToTenant;
+    use BelongsToTenant, HasFactory;
 
     protected $table = 'movimientos_directiva';
 
@@ -77,19 +77,21 @@ class MovimientoDirectiva extends Model
     public function getCausalLabelAttribute(): string
     {
         $causales = self::causalesDisponibles();
+
         return $causales[$this->causal_vacancia]['label'] ?? $this->causal_vacancia;
     }
 
     public function getCausalBadgeAttribute(): string
     {
         $causales = self::causalesDisponibles();
+
         return $causales[$this->causal_vacancia]['badge'] ?? 'bg-slate-100 text-slate-600 border-slate-200';
     }
 
     public function getCausalIconoAttribute(): string
     {
         $causales = self::causalesDisponibles();
+
         return $causales[$this->causal_vacancia]['icono'] ?? 'fa-circle-info';
     }
 }
-

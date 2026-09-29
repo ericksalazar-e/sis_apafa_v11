@@ -40,11 +40,11 @@ class QuioscoController extends Controller
         $mesesNombres = [
             1 => 'Enero', 2 => 'Febrero', 3 => 'Marzo', 4 => 'Abril',
             5 => 'Mayo', 6 => 'Junio', 7 => 'Julio', 8 => 'Agosto',
-            9 => 'Setiembre', 10 => 'Octubre', 11 => 'Noviembre', 12 => 'Diciembre'
+            9 => 'Setiembre', 10 => 'Octubre', 11 => 'Noviembre', 12 => 'Diciembre',
         ];
-        $mesActualNombre = $mesesNombres[(int) date('n')] . ' ' . date('Y');
+        $mesActualNombre = $mesesNombres[(int) date('n')].' '.date('Y');
         $canonMensualTotal = (float) ConcesionQuiosco::where('estado', 'VIGENTE')->sum('canon_mensual');
-        $recaudadoMesActual = (float) PagoQuiosco::where('mes_correspondiente', 'LIKE', '%' . $mesesNombres[(int) date('n')] . '%')->sum('monto');
+        $recaudadoMesActual = (float) PagoQuiosco::where('mes_correspondiente', 'LIKE', '%'.$mesesNombres[(int) date('n')].'%')->sum('monto');
         $totalDeudaQuioscos = (float) $quioscos->sum(function ($q) {
             return $q->concesionVigente ? $q->concesionVigente->deuda_acumulada : 0;
         });
@@ -134,7 +134,7 @@ class QuioscoController extends Controller
         ]);
 
         $mes = trim($request->mes_correspondiente);
-        if ($mes === '__OTRO__' && !empty($request->mes_personalizado)) {
+        if ($mes === '__OTRO__' && ! empty($request->mes_personalizado)) {
             $mes = trim($request->mes_personalizado);
         }
 
@@ -158,7 +158,7 @@ class QuioscoController extends Controller
                 }
             }
         }
-        $correlativo = 'Q-' . str_pad($ultimoNumero + 1, 6, '0', STR_PAD_LEFT);
+        $correlativo = 'Q-'.str_pad($ultimoNumero + 1, 6, '0', STR_PAD_LEFT);
 
         $pago = PagoQuiosco::create([
             'concesion_id' => $concesion->id,
@@ -171,7 +171,7 @@ class QuioscoController extends Controller
             'observaciones' => $request->observaciones,
         ]);
 
-        return redirect()->route('quioscos.index')->with('success', "Pago mensual de quiosco registrado (Mes: {$mes} - S/ " . number_format($request->monto, 2) . "). Comprobante {$correlativo} emitido.");
+        return redirect()->route('quioscos.index')->with('success', "Pago mensual de quiosco registrado (Mes: {$mes} - S/ ".number_format($request->monto, 2)."). Comprobante {$correlativo} emitido.");
     }
 
     /**

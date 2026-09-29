@@ -6,7 +6,6 @@ use App\Models\Estudiante;
 use App\Models\PadreFamilia;
 use Illuminate\Http\UploadedFile;
 use ZipArchive;
-use SimpleXMLElement;
 
 class EstudianteImportService
 {
@@ -116,7 +115,7 @@ class EstudianteImportService
         $headerRow = array_shift($rows);
         $columnMap = $this->mapHeaders($headerRow);
 
-        if (!isset($columnMap['dni']) || !isset($columnMap['nombres'])) {
+        if (! isset($columnMap['dni']) || ! isset($columnMap['nombres'])) {
             return [
                 'total' => 0,
                 'creados' => 0,
@@ -136,7 +135,7 @@ class EstudianteImportService
         // Cache de apoderados por DNI para agilizar consultas
         $padresCache = PadreFamilia::where('empresa_id', $empresaId)
             ->get(['id', 'padre_dni', 'padre_nombres', 'padre_ape_pat'])
-            ->keyBy(fn($p) => trim($p->padre_dni));
+            ->keyBy(fn ($p) => trim($p->padre_dni));
 
         $filaNumero = 1; // 1-indexed (fila 1 eran encabezados)
 
@@ -184,18 +183,23 @@ class EstudianteImportService
             $nivel = $this->normalizarNivel($this->getVal($row, $columnMap['nivel'] ?? null, $defaults['nivel'] ?? 'Primaria'));
             $grado = $this->normalizarGrado($this->getVal($row, $columnMap['grado'] ?? null, $defaults['grado'] ?? '1ro'));
             $seccion = $this->normalizarSeccion($this->getVal($row, $columnMap['seccion'] ?? null, $defaults['seccion'] ?? 'A'));
-            $turno = $this->normalizarTurno($this->getVal($row, $columnMap['turno'] ?? null, $defaults['turno'] ?? 'Mañana'));
-
-            $parentesco = trim($this->getVal($row, $columnMap['parentesco'] ?? null));
-            if (empty($parentesco)) {
-                $parentesco = 'HIJO(A)';
+            $rawTurno = $this->getVal($row, $columnMap['turno'] ?? null);
+            if (! empty($rawTurno)) {
+                $turno = $this->normalizarTurno($rawTurno);
+            } else {
+                $turno = \App\Models\GradoSeccionTurno::obtenerTurnoPredeterminado($empresaId, $nivel, $grado, $seccion);
+                if (empty($turno)) {
+                    $turno = $this->normalizarTurno($defaults['turno'] ?? 'Mañana');
+                }
             }
+            $parentescoRaw = $this->getVal($row, $columnMap['parentesco'] ?? null);
+            $parentesco = ! empty($parentescoRaw) ? mb_strtoupper(trim($parentescoRaw), 'UTF-8') : 'HIJO(A)';
 
             // DNI de Apoderado (Opcional)
             $dniApoderadoRaw = $this->getVal($row, $columnMap['dni_apoderado'] ?? null);
             $padreFamiliaId = null;
 
-            if (!empty($dniApoderadoRaw)) {
+            if (! empty($dniApoderadoRaw)) {
                 $dniApoderado = preg_replace('/[^\d]/', '', $dniApoderadoRaw);
                 if (strlen($dniApoderado) < 8) {
                     $dniApoderado = str_pad($dniApoderado, 8, '0', STR_PAD_LEFT);
@@ -225,14 +229,14 @@ class EstudianteImportService
                 $updateData = [
                     'nombres' => mb_strtoupper($nombres, 'UTF-8'),
                     'ape_pat' => mb_strtoupper($apePat, 'UTF-8'),
-                    'ape_mat' => !empty($apeMat) ? mb_strtoupper($apeMat, 'UTF-8') : $estudianteExistente->ape_mat,
+                    'ape_mat' => ! empty($apeMat) ? mb_strtoupper($apeMat, 'UTF-8') : $estudianteExistente->ape_mat,
                     'nivel' => $nivel,
                     'grado' => $grado,
                     'seccion' => $seccion,
                     'turno' => $turno,
                 ];
 
-                if (!empty($padreFamiliaId)) {
+                if (! empty($padreFamiliaId)) {
                     $updateData['padre_familia_id'] = $padreFamiliaId;
                     $updateData['parentesco'] = mb_strtoupper($parentesco, 'UTF-8');
                 }
@@ -240,7 +244,7 @@ class EstudianteImportService
                 $estudianteExistente->update($updateData);
                 $actualizados++;
 
-                if (!empty($estudianteExistente->padre_familia_id) || !empty($padreFamiliaId)) {
+                if (! empty($estudianteExistente->padre_familia_id) || ! empty($padreFamiliaId)) {
                     $conApoderado++;
                 } else {
                     $sinApoderado++;
@@ -253,7 +257,7 @@ class EstudianteImportService
                     'dni' => $dni,
                     'nombres' => mb_strtoupper($nombres, 'UTF-8'),
                     'ape_pat' => mb_strtoupper($apePat, 'UTF-8'),
-                    'ape_mat' => !empty($apeMat) ? mb_strtoupper($apeMat, 'UTF-8') : null,
+                    'ape_mat' => ! empty($apeMat) ? mb_strtoupper($apeMat, 'UTF-8') : null,
                     'nivel' => $nivel,
                     'grado' => $grado,
                     'seccion' => $seccion,
@@ -261,7 +265,7 @@ class EstudianteImportService
                 ]);
 
                 $creados++;
-                if (!empty($padreFamiliaId)) {
+                if (! empty($padreFamiliaId)) {
                     $conApoderado++;
                 } else {
                     $sinApoderado++;
@@ -312,6 +316,7 @@ class EstudianteImportService
                 $map['parentesco'] = $index;
             }
         }
+
         return $map;
     }
 
@@ -324,15 +329,17 @@ class EstudianteImportService
             ['a', 'e', 'i', 'o', 'u', 'n', 'u', '', '_', '_', '_'],
             $str
         );
+
         return preg_replace('/_+/', '_', trim($str, '_'));
     }
 
     protected function getVal(array $row, ?int $index, string $default = ''): string
     {
-        if ($index === null || !isset($row[$index])) {
+        if ($index === null || ! isset($row[$index])) {
             return $default;
         }
-        $val = trim((string)$row[$index]);
+        $val = trim((string) $row[$index]);
+
         return $val !== '' ? $val : $default;
     }
 
@@ -345,23 +352,28 @@ class EstudianteImportService
         if (str_contains($rawLower, 'sec')) {
             return 'Secundaria';
         }
+
         return 'Primaria';
     }
 
     protected function normalizarGrado(string $raw): string
     {
         $raw = trim($raw);
-        if (empty($raw)) return '1ro';
+        if (empty($raw)) {
+            return '1ro';
+        }
 
         // Si viene solo número ej: "1" -> "1ro"
         if (preg_match('/^([1-6])$/', $raw, $m)) {
             $suffixes = [1 => '1ro', 2 => '2do', 3 => '3ro', 4 => '4to', 5 => '5to', 6 => '6to'];
-            return $suffixes[(int)$m[1]] ?? "{$raw}to";
+
+            return $suffixes[(int) $m[1]] ?? "{$raw}to";
         }
 
         // Si viene "3 Años"
         if (preg_match('/^[345]\s*(anos|años)?$/i', $raw)) {
             $num = preg_replace('/[^\d]/', '', $raw);
+
             return "{$num} Años";
         }
 
@@ -371,11 +383,14 @@ class EstudianteImportService
     protected function normalizarSeccion(string $raw): string
     {
         $raw = trim($raw);
-        if (empty($raw)) return 'A';
+        if (empty($raw)) {
+            return 'A';
+        }
         $upper = mb_strtoupper($raw, 'UTF-8');
         if (in_array($upper, ['UNICA', 'ÚNICA', 'U'])) {
             return 'Única';
         }
+
         return substr($upper, 0, 10);
     }
 
@@ -388,6 +403,7 @@ class EstudianteImportService
         if (str_contains($rawLower, 'completo') || str_contains($rawLower, 'jornada')) {
             return 'Completo';
         }
+
         return 'Mañana';
     }
 
@@ -396,7 +412,7 @@ class EstudianteImportService
      */
     public function parseXlsx(string $filePath): array
     {
-        $zip = new ZipArchive();
+        $zip = new ZipArchive;
         if ($zip->open($filePath) !== true) {
             return [];
         }
@@ -409,11 +425,11 @@ class EstudianteImportService
             if ($xml && isset($xml->si)) {
                 foreach ($xml->si as $si) {
                     if (isset($si->t)) {
-                        $sharedStrings[] = (string)$si->t;
+                        $sharedStrings[] = (string) $si->t;
                     } elseif (isset($si->r)) {
                         $txt = '';
                         foreach ($si->r as $r) {
-                            $txt .= (string)$r->t;
+                            $txt .= (string) $r->t;
                         }
                         $sharedStrings[] = $txt;
                     } else {
@@ -432,7 +448,7 @@ class EstudianteImportService
         }
 
         $xml = @simplexml_load_string($sheetContent);
-        if (!$xml || !isset($xml->sheetData->row)) {
+        if (! $xml || ! isset($xml->sheetData->row)) {
             return [];
         }
 
@@ -443,24 +459,26 @@ class EstudianteImportService
 
             foreach ($r->c as $c) {
                 $attr = $c->attributes();
-                $ref = isset($attr['r']) ? (string)$attr['r'] : '';
-                $type = isset($attr['t']) ? (string)$attr['t'] : 'n';
+                $ref = isset($attr['r']) ? (string) $attr['r'] : '';
+                $type = isset($attr['t']) ? (string) $attr['t'] : 'n';
 
                 $val = '';
                 if ($type === 's') {
-                    $sIdx = isset($c->v) ? (int)$c->v : -1;
+                    $sIdx = isset($c->v) ? (int) $c->v : -1;
                     $val = $sharedStrings[$sIdx] ?? '';
                 } elseif ($type === 'inlineStr' && isset($c->is->t)) {
-                    $val = (string)$c->is->t;
+                    $val = (string) $c->is->t;
                 } else {
-                    $val = isset($c->v) ? (string)$c->v : '';
+                    $val = isset($c->v) ? (string) $c->v : '';
                 }
 
                 // Obtener columna (ej: 'A', 'B', 'AA')
-                if (!empty($ref) && preg_match('/^([A-Z]+)\d+$/i', $ref, $m)) {
+                if (! empty($ref) && preg_match('/^([A-Z]+)\d+$/i', $ref, $m)) {
                     $colIdx = $this->colLetterToIndex($m[1]);
                     $rowValues[$colIdx] = trim($val);
-                    if ($colIdx > $maxCol) $maxCol = $colIdx;
+                    if ($colIdx > $maxCol) {
+                        $maxCol = $colIdx;
+                    }
                 } else {
                     $rowValues[] = trim($val);
                     $maxCol = count($rowValues) - 1;
@@ -506,7 +524,7 @@ class EstudianteImportService
         }
 
         // Convertir ISO-8859-1 o Windows-1252 a UTF-8 si no es UTF-8 válido
-        if (!mb_check_encoding($raw, 'UTF-8')) {
+        if (! mb_check_encoding($raw, 'UTF-8')) {
             $raw = mb_convert_encoding($raw, 'UTF-8', 'ISO-8859-1');
         }
 
@@ -526,7 +544,9 @@ class EstudianteImportService
 
         $rows = [];
         foreach ($lines as $line) {
-            if (trim($line) === '') continue;
+            if (trim($line) === '') {
+                continue;
+            }
             $row = str_getcsv($line, $bestDelim);
             $rows[] = array_map('trim', $row);
         }
@@ -542,6 +562,7 @@ class EstudianteImportService
         for ($i = 0; $i < $len; $i++) {
             $idx = $idx * 26 + (ord($col[$i]) - 64);
         }
+
         return $idx - 1;
     }
 
@@ -551,9 +572,10 @@ class EstudianteImportService
         $letter = '';
         while ($colIndex > 0) {
             $rem = ($colIndex - 1) % 26;
-            $letter = chr(65 + $rem) . $letter;
+            $letter = chr(65 + $rem).$letter;
             $colIndex = intval(($colIndex - $rem) / 26);
         }
+
         return $letter;
     }
 
@@ -562,62 +584,62 @@ class EstudianteImportService
      */
     protected function createXlsxFile(string $filePath, array $headers, array $rows): void
     {
-        $zip = new ZipArchive();
+        $zip = new ZipArchive;
         $zip->open($filePath, ZipArchive::CREATE | ZipArchive::OVERWRITE);
 
         // [Content_Types].xml
-        $contentTypes = '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>' .
-            '<Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types">' .
-            '<Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/>' .
-            '<Default Extension="xml" ContentType="application/xml"/>' .
-            '<Override PartName="/xl/workbook.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet.main+xml"/>' .
-            '<Override PartName="/xl/worksheets/sheet1.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.worksheet+xml"/>' .
-            '<Override PartName="/xl/sharedStrings.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.sharedStringItem+xml"/>' .
-            '<Override PartName="/xl/styles.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.styles+xml"/>' .
+        $contentTypes = '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>'.
+            '<Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types">'.
+            '<Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/>'.
+            '<Default Extension="xml" ContentType="application/xml"/>'.
+            '<Override PartName="/xl/workbook.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet.main+xml"/>'.
+            '<Override PartName="/xl/worksheets/sheet1.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.worksheet+xml"/>'.
+            '<Override PartName="/xl/sharedStrings.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.sharedStringItem+xml"/>'.
+            '<Override PartName="/xl/styles.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.styles+xml"/>'.
             '</Types>';
         $zip->addFromString('[Content_Types].xml', $contentTypes);
 
         // _rels/.rels
-        $rels = '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>' .
-            '<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">' .
-            '<Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="xl/workbook.xml"/>' .
+        $rels = '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>'.
+            '<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">'.
+            '<Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="xl/workbook.xml"/>'.
             '</Relationships>';
         $zip->addFromString('_rels/.rels', $rels);
 
         // xl/_rels/workbook.xml.rels
-        $wbRels = '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>' .
-            '<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">' .
-            '<Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/worksheet" Target="worksheets/sheet1.xml"/>' .
-            '<Relationship Id="rId2" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/sharedStrings" Target="sharedStrings.xml"/>' .
-            '<Relationship Id="rId3" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/styles" Target="styles.xml"/>' .
+        $wbRels = '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>'.
+            '<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">'.
+            '<Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/worksheet" Target="worksheets/sheet1.xml"/>'.
+            '<Relationship Id="rId2" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/sharedStrings" Target="sharedStrings.xml"/>'.
+            '<Relationship Id="rId3" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/styles" Target="styles.xml"/>'.
             '</Relationships>';
         $zip->addFromString('xl/_rels/workbook.xml.rels', $wbRels);
 
         // xl/workbook.xml
-        $workbook = '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>' .
-            '<workbook xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships">' .
-            '<sheets><sheet name="Estudiantes" sheetId="1" r:id="rId1"/></sheets>' .
+        $workbook = '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>'.
+            '<workbook xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships">'.
+            '<sheets><sheet name="Estudiantes" sheetId="1" r:id="rId1"/></sheets>'.
             '</workbook>';
         $zip->addFromString('xl/workbook.xml', $workbook);
 
         // xl/styles.xml (Estilo básico para encabezados con negrita y fondo)
-        $styles = '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>' .
-            '<styleSheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main">' .
-            '<fonts count="2">' .
-            '<font><sz val="11"/><name val="Calibri"/></font>' .
-            '<font><b/><color rgb="FFFFFFFF"/><sz val="11"/><name val="Calibri"/></font>' .
-            '</fonts>' .
-            '<fills count="3">' .
-            '<fill><patternFill patternType="none"/></fill>' .
-            '<fill><patternFill patternType="gray125"/></fill>' .
-            '<fill><patternFill patternType="solid"><fgColor rgb="FF4F46E5"/></patternFill></fill>' . // Indigo header
-            '</fills>' .
-            '<borders count="1"><border><left/><right/><top/><bottom/></border></borders>' .
-            '<cellStyleXfs count="1"><xf numFmtId="0" fontId="0" fillId="0" borderId="0"/></cellStyleXfs>' .
-            '<cellXfs count="2">' .
-            '<xf numFmtId="0" fontId="0" fillId="0" borderId="0" xfId="0"/>' . // Normal
-            '<xf numFmtId="0" fontId="1" fillId="2" borderId="0" xfId="0" applyFont="1" applyFill="1"/>' . // Header
-            '</cellXfs>' .
+        $styles = '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>'.
+            '<styleSheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main">'.
+            '<fonts count="2">'.
+            '<font><sz val="11"/><name val="Calibri"/></font>'.
+            '<font><b/><color rgb="FFFFFFFF"/><sz val="11"/><name val="Calibri"/></font>'.
+            '</fonts>'.
+            '<fills count="3">'.
+            '<fill><patternFill patternType="none"/></fill>'.
+            '<fill><patternFill patternType="gray125"/></fill>'.
+            '<fill><patternFill patternType="solid"><fgColor rgb="FF4F46E5"/></patternFill></fill>'. // Indigo header
+            '</fills>'.
+            '<borders count="1"><border><left/><right/><top/><bottom/></border></borders>'.
+            '<cellStyleXfs count="1"><xf numFmtId="0" fontId="0" fillId="0" borderId="0"/></cellStyleXfs>'.
+            '<cellXfs count="2">'.
+            '<xf numFmtId="0" fontId="0" fillId="0" borderId="0" xfId="0"/>'. // Normal
+            '<xf numFmtId="0" fontId="1" fillId="2" borderId="0" xfId="0" applyFont="1" applyFill="1"/>'. // Header
+            '</cellXfs>'.
             '</styleSheet>';
         $zip->addFromString('xl/styles.xml', $styles);
 
@@ -626,24 +648,25 @@ class EstudianteImportService
         $sharedStrings = [];
         $stringLookup = [];
 
-        $getSharedStringIndex = function($str) use (&$sharedStrings, &$stringLookup) {
-            $str = (string)$str;
+        $getSharedStringIndex = function ($str) use (&$sharedStrings, &$stringLookup) {
+            $str = (string) $str;
             if (isset($stringLookup[$str])) {
                 return $stringLookup[$str];
             }
             $idx = count($sharedStrings);
             $sharedStrings[] = $str;
             $stringLookup[$str] = $idx;
+
             return $idx;
         };
 
         // xl/worksheets/sheet1.xml
-        $sheetXml = '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>' .
-            '<worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main">' .
+        $sheetXml = '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>'.
+            '<worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main">'.
             '<cols>';
         // Ancho de columnas predeterminado agradable
         for ($c = 1; $c <= count($headers); $c++) {
-            $sheetXml .= '<col min="' . $c . '" max="' . $c . '" width="20" customWidth="1"/>';
+            $sheetXml .= '<col min="'.$c.'" max="'.$c.'" width="20" customWidth="1"/>';
         }
         $sheetXml .= '</cols><sheetData>';
 
@@ -651,13 +674,13 @@ class EstudianteImportService
         foreach ($allData as $row) {
             $isHeader = ($rowNum === 1);
             $styleAttr = $isHeader ? ' s="1"' : '';
-            $sheetXml .= '<row r="' . $rowNum . '">';
+            $sheetXml .= '<row r="'.$rowNum.'">';
             $colNum = 0;
             foreach ($row as $cellVal) {
                 $colLetter = $this->indexToColLetter($colNum);
-                $cellRef = $colLetter . $rowNum;
+                $cellRef = $colLetter.$rowNum;
                 $sIdx = $getSharedStringIndex($cellVal);
-                $sheetXml .= '<c r="' . $cellRef . '" t="s"' . $styleAttr . '><v>' . $sIdx . '</v></c>';
+                $sheetXml .= '<c r="'.$cellRef.'" t="s"'.$styleAttr.'><v>'.$sIdx.'</v></c>';
                 $colNum++;
             }
             $sheetXml .= '</row>';
@@ -667,10 +690,10 @@ class EstudianteImportService
         $zip->addFromString('xl/worksheets/sheet1.xml', $sheetXml);
 
         // xl/sharedStrings.xml
-        $ssXml = '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>' .
-            '<sst xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" count="' . count($sharedStrings) . '" uniqueCount="' . count($sharedStrings) . '">';
+        $ssXml = '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>'.
+            '<sst xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" count="'.count($sharedStrings).'" uniqueCount="'.count($sharedStrings).'">';
         foreach ($sharedStrings as $s) {
-            $ssXml .= '<si><t>' . htmlspecialchars($s, ENT_XML1 | ENT_COMPAT, 'UTF-8') . '</t></si>';
+            $ssXml .= '<si><t>'.htmlspecialchars($s, ENT_XML1 | ENT_COMPAT, 'UTF-8').'</t></si>';
         }
         $ssXml .= '</sst>';
         $zip->addFromString('xl/sharedStrings.xml', $ssXml);
